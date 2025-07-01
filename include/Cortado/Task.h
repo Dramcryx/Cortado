@@ -5,6 +5,11 @@
 //
 #include <Cortado/Detail/CoroutinePromiseBase.h>
 
+// STL
+//
+#include <tuple>
+#include <utility>
+
 namespace Cortado
 {
 
@@ -14,7 +19,53 @@ class Task;
 template <Concepts::TaskImpl T, typename R>
 struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
 {
+	using Allocator = typename T::Allocator;
+
+	PromiseType()
+	{
+		static_assert(std::is_default_constructible_v<Allocator>);
+	}
+
+	template <typename ... TArgs>
+	PromiseType(TArgs&& ... args) :
+		PromiseType{ AllocatorSearchTag{}, std::forward<TArgs>(args)... }
+	{
+	}
+
+	static void* operator new(std::size_t size, Allocator a)
+	{
+		return a.allocate(size);
+	}
+
+	static void* operator new(std::size_t size)
+	{
+		return operator new(size, Allocator{});
+	}
+
+	static void operator delete(void* ptr, std::size_t size)
+	{
+		// No allocator available here; must free normally or track externally
+		::operator delete(ptr);
+	}
+
 	Task<T, R> get_return_object();
+
+private:
+	Allocator m_alloc;
+
+	struct AllocatorSearchTag {};
+
+	template <typename ... TArgs>
+	PromiseType(AllocatorSearchTag, Allocator al, TArgs&& ... args) :
+		m_alloc{ al }
+	{
+	}
+
+	template <typename ... TArgs>
+	PromiseType(AllocatorSearchTag, TArgs&& ... args)
+	{
+		static_assert(std::is_default_constructible_v<Allocator>);
+	}
 };
 
 template <Concepts::TaskImpl T, typename R = void>

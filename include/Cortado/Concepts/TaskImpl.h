@@ -5,6 +5,7 @@
 //
 #include <Cortado/Concepts/AtomicIncDec.h>
 #include <Cortado/Concepts/AtomicCompareExchange.h>
+#include <Cortado/Concepts/CoroutineAllocator.h>
 #include <Cortado/Concepts/ErrorHandler.h>
 
 namespace Cortado::Concepts
@@ -23,6 +24,11 @@ concept TaskImpl =
 	&& HasAtomicCompareExchangeFn<T>
 	&& requires
 	{
+		// Provides allocator type
+		//
+		typename T::Allocator;
+		CoroutineAllocator<typename T::Allocator>;
+
 		// Thread yielder func
 		//
 		{ T::YieldCurrentThread() };

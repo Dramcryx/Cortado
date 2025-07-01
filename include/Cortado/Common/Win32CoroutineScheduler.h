@@ -12,7 +12,7 @@
 namespace Cortado::Common
 {
 
-struct Win32ThreadPoolScheduler
+struct Win32CoroutineScheduler
 {
     void Schedule(std::coroutine_handle<> h)
     {
@@ -26,9 +26,9 @@ struct Win32ThreadPoolScheduler
         CloseThreadpoolWork(work);
     }
 
-    static Win32ThreadPoolScheduler& GetDefaultBackgroundScheduler()
+    static Win32CoroutineScheduler& GetDefaultBackgroundScheduler()
     {
-        static Win32ThreadPoolScheduler sched;
+        static Win32CoroutineScheduler sched;
         return sched;
     }
 

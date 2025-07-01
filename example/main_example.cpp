@@ -2,6 +2,7 @@
 //
 #include <Cortado/Await.h>
 #include <Cortado/Common/STLAtomicIncDec.h>
+#include <Cortado/Common/STLCoroutineAllocator.h>
 #include <Cortado/Common/STLExceptionHandler.h>
 #include <Cortado/Common/Win32CoroutineScheduler.h>
 #include <Cortado/Common/Win32AtomicCompareExchange.h>
@@ -14,10 +15,12 @@
 //
 #include <iostream>
 
+
 struct STLWithWin32TaskImpl :
-    Cortado::Common::STLExceptionHandler,
     Cortado::Common::STLAtomicIncDec,
-    Cortado::Common::Win32ThreadPoolScheduler,
+    Cortado::Common::STLCoroutineAllocator,
+    Cortado::Common::STLExceptionHandler,
+    Cortado::Common::Win32CoroutineScheduler,
     Cortado::Common::Win32AtomicCompareExchange
 {
     inline static void YieldCurrentThread()

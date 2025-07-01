@@ -20,8 +20,8 @@ According to my personal experience, there are additional limitations for older 
 The goal of this strategy is to provide a basic `Task` and set of common awaiters, which you can customize exception behavior, atomic implementation, and runtime implementation for basic things such as offloading coroutine to background (like `co_await _winrt::resume_background()`);
 
 # TODO
-1) Support custom allocators;
-2) Extend cotract with async mutexes and event - this would allow to implement new awaiters;
-3) Introduce more system-specific atomics and runtimes - macOS libkern, more Win32, try doing Linux as well;
-4) Cover with docs;
-5) Standartize format.
+1) Extend cotract with async mutexes and event - this would allow to implement new awaiters;
+2) Introduce more system-specific atomics and runtimes - macOS libkern, more Win32, try doing Linux as well;
+3) Cover with docs;
+4) Standartize format;
+5) Support stack tracing.
