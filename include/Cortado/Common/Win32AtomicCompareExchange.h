@@ -1,11 +1,11 @@
-#ifndef CORTADO_COMMON_INTERLOCKED_COMPARE_EXCHANGE_H
-#define CORTADO_COMMON_INTERLOCKED_COMPARE_EXCHANGE_H
+#ifndef CORTADO_ATOMIC_COMPARE_EXCHANGE_WIN32_ATOMIC_COMPARE_EXCHANGE_H
+#define CORTADO_ATOMIC_COMPARE_EXCHANGE_WIN32_ATOMIC_COMPARE_EXCHANGE_H
 
 // Win32
 //
 #include <intrin.h>
 
-namespace Cortado::Common
+namespace Cortado::AtomicCompareExchange
 {
 
 struct Win32AtomicCompareExchange
@@ -32,6 +32,6 @@ struct Win32AtomicCompareExchange
     static constexpr auto AtomicCompareExchangeFn = Win32AtomicCompareExchangeFn;
 };
 
-} // namespace Cortado::Common
+} // namespace Cortado::AtomicCompareExchange
 
 #endif

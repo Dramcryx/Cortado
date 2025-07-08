@@ -1,5 +1,5 @@
-#ifndef CORTADO_COMMON_WIN32_COROUTINE_SCHEDULER_H
-#define CORTADO_COMMON_WIN32_COROUTINE_SCHEDULER_H
+#ifndef CORTADO_COMMON_COROUTINE_SCHEDULERS_WIN32_COROUTINE_SCHEDULER_H
+#define CORTADO_COMMON_COROUTINE_SCHEDULERS_WIN32_COROUTINE_SCHEDULER_H
 
 // Win32
 //
@@ -9,7 +9,7 @@
 //
 #include <coroutine>
 
-namespace Cortado::Common
+namespace Cortado::Common::CoroutineSchedulers
 {
 
 struct Win32CoroutineScheduler
@@ -40,6 +40,6 @@ private:
     }
 };
 
-} // namespace Cortado::Common
+} // namespace Cortado::Common::CoroutineSchedulers
 
 #endif

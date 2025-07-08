@@ -114,8 +114,8 @@ public:
 	}
 
 private:
-	volatile alignas(long) HeldValue m_heldValue = HeldValue::None;
-	volatile alignas(long) CallbackRaceState m_callbackRace = CallbackRaceState::None;
+	alignas(long) volatile HeldValue m_heldValue = HeldValue::None;
+	alignas(long) volatile CallbackRaceState m_callbackRace = CallbackRaceState::None;
 
 	alignas(AlignOfResultStorage<R, E>()) std::byte m_resultStorage[SizeOfResultStorage<R, E>()] = {};
 
