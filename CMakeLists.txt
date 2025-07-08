@@ -12,6 +12,7 @@ endif()
 project ("Cortado")
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (WIN32)
   add_executable(native_example "example/exampleWin32.cpp")
@@ -22,4 +23,9 @@ endif()
 if (APPLE)
   add_executable(native_example "example/exampleMac.cpp")
   target_include_directories(native_example PUBLIC ./include)
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-fsanitize=leak)
+    add_link_options(-fsanitize=leak)  # Needed for runtime support
 endif()

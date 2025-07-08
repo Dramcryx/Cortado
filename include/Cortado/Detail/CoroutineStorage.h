@@ -50,6 +50,12 @@ struct CoroutineStorage
 public:
 	CoroutineStorage() = default;
 
+	CoroutineStorage(const CoroutineStorage&) = delete;
+	CoroutineStorage& operator=(const CoroutineStorage&) = delete;
+
+	CoroutineStorage(CoroutineStorage&&) = delete;
+	CoroutineStorage& operator=(CoroutineStorage&&) = delete;
+
 	~CoroutineStorage()
 	{
 		DestroyResult();

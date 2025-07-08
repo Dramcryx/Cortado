@@ -1,36 +1,13 @@
 // Cortado
 //
 #include <Cortado/Await.h>
-#include <Cortado/Common/STLAtomicIncDec.h>
-#include <Cortado/Common/STLCoroutineAllocator.h>
-#include <Cortado/Common/STLExceptionHandler.h>
-#include <Cortado/Common/MacOSCoroutineScheduler.h>
-#include <Cortado/Common/MacOSAtomicCompareExchange.h>
-
-// macOS
-//
-#include <pthread.h>
+#include <Cortado/Task.h>
 
 // STL
 //
 #include <iostream>
 
-
-struct STLWithMacOSTaskImpl :
-    Cortado::Common::STLAtomicIncDec,
-    Cortado::Common::STLCoroutineAllocator,
-    Cortado::Common::STLExceptionHandler,
-    Cortado::Common::MacOSCoroutineScheduler,
-    Cortado::Common::MacOSAtomicCompareExchange
-{
-    inline static void YieldCurrentThread()
-    {
-        pthread_yield_np();
-    }
-};
-
-template <typename R = void>
-using Task = Cortado::Task<STLWithMacOSTaskImpl, R>;
+using namespace Cortado;
 
 Task<int> Ans()
 {

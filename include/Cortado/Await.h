@@ -33,9 +33,9 @@ inline ResumeBackgroundAwaiter ResumeBackground()
 }
 
 template <Concepts::TaskImpl T, typename R, typename ... Args>
-Task<T, void> WhenAll(Task<T, R>& first, Args ... next)
+Task<void, T> WhenAll(Task<R, T>& first, Args ... next)
 {
-	co_await std::forward<Task<T,R>>(first);
+	co_await std::forward<Task<R, T>>(first);
 	(void(co_await next), ...);
 }
 

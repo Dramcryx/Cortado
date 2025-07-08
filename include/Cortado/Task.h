@@ -3,17 +3,17 @@
 
 // Cortado
 //
+#include <Cortado/DefaultTaskImpl.h>
 #include <Cortado/Detail/CoroutinePromiseBase.h>
 
 // STL
 //
-#include <tuple>
 #include <utility>
 
 namespace Cortado
 {
 
-template <Concepts::TaskImpl T, typename R>
+template <typename R, Concepts::TaskImpl T>
 class Task;
 
 template <Concepts::TaskImpl T, typename R>
@@ -42,13 +42,7 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
 		return operator new(size, Allocator{});
 	}
 
-	static void operator delete(void* ptr, std::size_t size)
-	{
-		// No allocator available here; must free normally or track externally
-		::operator delete(ptr);
-	}
-
-	Task<T, R> get_return_object();
+	Task<R, T> get_return_object();
 
 private:
 	Allocator m_alloc;
@@ -68,7 +62,7 @@ private:
 	}
 };
 
-template <Concepts::TaskImpl T, typename R = void>
+template <typename R = void, Concepts::TaskImpl T = DefaultTaskImpl>
 class Task
 {
 public:
@@ -115,10 +109,10 @@ private:
 };
 
 template <Concepts::TaskImpl T, typename R>
-Task<T, R> PromiseType<T, R>::get_return_object()
+Task<R, T> PromiseType<T, R>::get_return_object()
 {
 	this->AddRef();
-	return Task<T, R>{std::coroutine_handle<PromiseType<T, R>>::from_promise(*this)};
+	return Task<R, T>{std::coroutine_handle<PromiseType<T, R>>::from_promise(*this)};
 }
 
 } // namespace Cortado
