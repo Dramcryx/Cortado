@@ -11,7 +11,7 @@ namespace Cortado::Detail
 {
 
 template <Concepts::TaskImpl T, typename R>
-struct CoroutinePromiseBase : AtomicRefCount<typename T::AtomicIncDec>
+struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 {
 	std::suspend_never initial_suspend()
 	{
@@ -64,7 +64,7 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::AtomicIncDec>
 	}
 
 protected:
-	CoroutineStorage<R, typename T::Exception, T::AtomicCompareExchangeFn> m_storage;
+	CoroutineStorage<R, typename T::Exception, typename T::Atomic> m_storage;
 
 	void RethrowError()
 	{

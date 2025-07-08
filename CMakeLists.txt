@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (WIN32)
-  add_executable(native_example "example/exampleWin32.cpp")
+  add_executable(native_example "example/exampleWin32.cpp" "include/Cortado/Concepts/Atomic.h")
   target_include_directories(native_example PUBLIC ./include)
   target_compile_definitions(native_example PUBLIC _AMD64_ _UNICODE)
 endif()

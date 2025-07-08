@@ -1,6 +1,8 @@
 #ifndef CORTADO_COMMON_COROUTINE_SCHEDULERS_WIN32_COROUTINE_SCHEDULER_H
 #define CORTADO_COMMON_COROUTINE_SCHEDULERS_WIN32_COROUTINE_SCHEDULER_H
 
+#ifdef _WIN32
+
 // Win32
 //
 #include <threadpoolapiset.h>
@@ -9,7 +11,7 @@
 //
 #include <coroutine>
 
-namespace Cortado::Common::CoroutineSchedulers
+namespace Cortado::Common
 {
 
 struct Win32CoroutineScheduler
@@ -40,6 +42,8 @@ private:
     }
 };
 
-} // namespace Cortado::Common::CoroutineSchedulers
+} // namespace Cortado::Common
+
+#endif
 
 #endif

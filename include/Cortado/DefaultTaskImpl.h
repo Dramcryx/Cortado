@@ -3,7 +3,7 @@
 
 // Cortado
 //
-#include <Cortado/Common/STLAtomicIncDec.h>
+#include <Cortado/Common/STLAtomic.h>
 #include <Cortado/Common/STLCoroutineAllocator.h>
 #include <Cortado/Common/STLExceptionHandler.h>
 
@@ -12,7 +12,6 @@
 // Cortado
 //
 #include <Cortado/Common/MacOSCoroutineScheduler.h>
-#include <Cortado/Common/MacOSAtomicCompareExchange.h>
 
 // POSIX
 //
@@ -33,7 +32,6 @@ using AtomicCompareExchange = Common::MacOSAtomicCompareExchange;
 // Cortado
 //
 #include <Cortado/Common/Win32CoroutineScheduler.h>
-#include <Cortado/Common/Win32AtomicCompareExchange.h>
 
 // Win32
 //
@@ -42,7 +40,6 @@ using AtomicCompareExchange = Common::MacOSAtomicCompareExchange;
 namespace Cortado
 {
 using DefaultScheduler = Common::Win32CoroutineScheduler;
-using AtomicCompareExchange = Common::Win32AtomicCompareExchange;
 } // namespace Cortado
 
 #ifndef CORTADO_DEFAULT_YIELD
@@ -57,11 +54,10 @@ namespace Cortado
 {
 
 struct DefaultTaskImpl :
-    Cortado::Common::STLAtomicIncDec,
+    Cortado::Common::STLAtomic,
     Cortado::Common::STLCoroutineAllocator,
     Cortado::Common::STLExceptionHandler,
-    DefaultScheduler,
-    AtomicCompareExchange
+    DefaultScheduler
 {
     inline static void YieldCurrentThread()
     {

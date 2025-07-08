@@ -3,12 +3,12 @@
 
 // Cortado
 //
-#include <Cortado/Concepts/AtomicIncDec.h>
+#include <Cortado/Concepts/Atomic.h>
 
 namespace Cortado::Detail
 {
 
-template <Concepts::AtomicIncDec T>
+template <Concepts::Atomic T>
 class AtomicRefCount
 {
 public:

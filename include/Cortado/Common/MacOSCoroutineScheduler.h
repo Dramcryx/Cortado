@@ -1,6 +1,8 @@
 #ifndef CORTADO_COMMON_MACOS_COROUTINE_SCHEDULER_H
 #define CORTADO_COMMON_MACOS_COROUTINE_SCHEDULER_H
 
+#ifdef __APPLE__
+
 // macOS
 //
 #include <dispatch/dispatch.h>
@@ -37,5 +39,7 @@ private:
 };
 
 } // namespace Cortado::Common
+
+#endif
 
 #endif

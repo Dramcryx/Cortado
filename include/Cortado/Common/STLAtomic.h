@@ -8,9 +8,9 @@
 namespace Cortado::Common
 {
 
-struct STLAtomicIncDec
+struct STLAtomic
 {
-	using AtomicIncDec = std::atomic<int>;
+	using Atomic = std::atomic<unsigned long>;
 };
 
 } // namespace Cortado::Common

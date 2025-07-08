@@ -3,7 +3,7 @@
 
 // Cortado
 //
-#include <Cortado/Concepts/AtomicCompareExchange.h>
+#include <Cortado/Concepts/Atomic.h>
 
 // STL
 //
@@ -30,21 +30,21 @@ constexpr std::size_t SizeOfResultStorage()
 	return SizeOfR > SizeOfE ? SizeOfR : SizeOfE;
 }
 
-enum class HeldValue : long
+enum class HeldValue : unsigned long
 {
 	None = 0,
 	Value,
 	Error
 };
 
-enum class CallbackRaceState : long
+enum class CallbackRaceState : unsigned long
 {
 	None = 0,
 	Value,
 	Callback
 };
 
-template <typename R, typename E, Concepts::AtomicCompareExchangeFn CmpXchg>
+template <typename R, typename E, Concepts::Atomic Atomic>
 struct CoroutineStorage
 {
 public:
@@ -64,18 +64,18 @@ public:
 	template <typename U>
 	void SetValue(U&& u)
 	{
-		new (&m_resultStorage[0]) R{ std::forward<U>(u) };
+		::new (&m_resultStorage[0]) R{ std::forward<U>(u) };
 
-		m_heldValue = HeldValue::Value;
+		m_heldValue = static_cast<unsigned long>(HeldValue::Value);
 
 		CallbackValueRendezvous();
 	}
 
 	void SetError(E&& e)
 	{
-		new (&m_resultStorage[0]) E{ std::forward<E>(e) };
+		::new (&m_resultStorage[0]) E{ std::forward<E>(e) };
 
-		m_heldValue = HeldValue::Error;
+		m_heldValue = static_cast<unsigned long>(HeldValue::Error);
 
 		CallbackValueRendezvous();
 	}
@@ -84,10 +84,9 @@ public:
 	{
 		m_continuation = h;
 		CallbackRaceState expectedState = CallbackRaceState::None;
-		if (CmpXchg(
-			*reinterpret_cast<volatile long*>(&m_callbackRace),
-			*reinterpret_cast<long*>(&expectedState),
-			static_cast<long>(CallbackRaceState::Callback)))
+		if (m_callbackRace.compare_exchange_strong(
+			*reinterpret_cast<unsigned long*>(&expectedState),
+			static_cast<unsigned long>(CallbackRaceState::Callback)))
 		{
 			// Successfully stored callback first
 			return;
@@ -101,7 +100,8 @@ public:
 
 	HeldValue GetHeldValueType() const
 	{
-		return m_heldValue;
+		unsigned long valueType = m_heldValue;
+		return static_cast<HeldValue>(valueType);
 	}
 
 	R& UnsafeValue()
@@ -120,8 +120,8 @@ public:
 	}
 
 private:
-	alignas(long) volatile HeldValue m_heldValue = HeldValue::None;
-	alignas(long) volatile CallbackRaceState m_callbackRace = CallbackRaceState::None;
+	Atomic m_heldValue{ static_cast<unsigned long>(HeldValue::None) };
+	Atomic m_callbackRace{ static_cast<unsigned long>(CallbackRaceState::None) };
 
 	alignas(AlignOfResultStorage<R, E>()) std::byte m_resultStorage[SizeOfResultStorage<R, E>()] = {};
 
@@ -129,7 +129,8 @@ private:
 
 	void DestroyResult()
 	{
-		switch (m_heldValue)
+		unsigned long valueType = m_heldValue;
+		switch (static_cast<HeldValue>(valueType))
 		{
 		case HeldValue::Value:
 			UnsafeValue().~R();
@@ -145,10 +146,9 @@ private:
 	void CallbackValueRendezvous()
 	{
 		CallbackRaceState expectedState = CallbackRaceState::None;
-		if (CmpXchg(
-			*reinterpret_cast<volatile long*>(&m_callbackRace),
-			*reinterpret_cast<long*>(&expectedState),
-			static_cast<long>(CallbackRaceState::Value)))
+		if (m_callbackRace.compare_exchange_strong(
+			*reinterpret_cast<unsigned long*>(&expectedState),
+			static_cast<unsigned long>(CallbackRaceState::Value)))
 		{
 			// Successfully stored value first
 			return;

@@ -3,8 +3,7 @@
 
 // Cortado
 //
-#include <Cortado/Concepts/AtomicIncDec.h>
-#include <Cortado/Concepts/AtomicCompareExchange.h>
+#include <Cortado/Concepts/Atomic.h>
 #include <Cortado/Concepts/CoroutineAllocator.h>
 #include <Cortado/Concepts/ErrorHandler.h>
 
@@ -20,8 +19,7 @@ namespace Cortado::Concepts
 template <typename T>
 concept TaskImpl =
 	ErrorHandler<T>
-	&& HasAtomicIncDec<T>
-	&& HasAtomicCompareExchangeFn<T>
+	&& HasAtomic<T>
 	&& requires
 	{
 		// Provides allocator type

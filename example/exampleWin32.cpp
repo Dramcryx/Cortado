@@ -1,36 +1,22 @@
 // Cortado
 //
 #include <Cortado/Await.h>
-#include <Cortado/Common/STLAtomicIncDec.h>
-#include <Cortado/Common/STLCoroutineAllocator.h>
-#include <Cortado/Common/STLExceptionHandler.h>
-#include <Cortado/Common/Win32CoroutineScheduler.h>
-#include <Cortado/Common/Win32AtomicCompareExchange.h>
-
-// Win32
-//
-#include <processthreadsapi.h>
+#include <Cortado/Task.h>
 
 // STL
 //
 #include <iostream>
 
+using namespace Cortado;
 
-struct STLWithWin32TaskImpl :
-    Cortado::Common::STLAtomicIncDec,
-    Cortado::Common::STLCoroutineAllocator,
-    Cortado::Common::STLExceptionHandler,
-    Cortado::Common::Win32CoroutineScheduler,
-    Cortado::Common::Win32AtomicCompareExchange
+class WithAsyncMethod
 {
-    inline static void YieldCurrentThread()
+public:
+    Task<int> VoidAsync()
     {
-        YieldProcessor();
+        co_return 1;
     }
 };
-
-template <typename R = void>
-using Task = Cortado::Task<STLWithWin32TaskImpl, R>;
 
 Task<int> Ans()
 {
@@ -43,8 +29,8 @@ Task<int> Ans()
 Task<> Ans2()
 {
     std::cout << __FUNCTION__ << " Started on thread " << GetCurrentThreadId() << "\n";
-    Task<int> tasks[]{ Ans(), Ans(), Ans() };
-    co_await Cortado::WhenAll(tasks[0], tasks[1], tasks[2]);
+    Task<int> tasks[]{ Ans(), Ans(), Ans(), WithAsyncMethod{}.VoidAsync() };
+    co_await Cortado::WhenAll(tasks[0], tasks[1], tasks[2], tasks[3]);
     std::cout << __FUNCTION__ << " Resumed on thread " << GetCurrentThreadId() << "\n";
     co_return;
 }
