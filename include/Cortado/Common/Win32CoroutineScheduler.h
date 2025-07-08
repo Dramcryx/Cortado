@@ -9,7 +9,7 @@
 //
 #include <coroutine>
 
-namespace Cortado::Common::CoroutineSchedulers
+namespace Cortado::Common
 {
 
 struct Win32CoroutineScheduler
@@ -40,6 +40,6 @@ private:
     }
 };
 
-} // namespace Cortado::Common::CoroutineSchedulers
+} // namespace Cortado::Common
 
 #endif

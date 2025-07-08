@@ -5,7 +5,7 @@
 //
 #include <intrin.h>
 
-namespace Cortado::AtomicCompareExchange
+namespace Cortado::Common
 {
 
 struct Win32AtomicCompareExchange
@@ -32,6 +32,6 @@ struct Win32AtomicCompareExchange
     static constexpr auto AtomicCompareExchangeFn = Win32AtomicCompareExchangeFn;
 };
 
-} // namespace Cortado::AtomicCompareExchange
+} // namespace Cortado::Common
 
 #endif
