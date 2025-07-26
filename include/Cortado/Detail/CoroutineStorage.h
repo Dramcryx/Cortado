@@ -3,6 +3,7 @@
 
 // Cortado
 //
+#include "Cortado/Concepts/TaskImpl.h"
 #include <Cortado/Concepts/Atomic.h>
 
 // STL
@@ -80,7 +81,7 @@ public:
 		CallbackValueRendezvous();
 	}
 
-	void SetContinuation(std::coroutine_handle<> h)
+	bool SetContinuation(std::coroutine_handle<> h)
 	{
 		m_continuation = h;
 		CallbackRaceState expectedState = CallbackRaceState::None;
@@ -89,13 +90,16 @@ public:
 			static_cast<unsigned long>(CallbackRaceState::Callback)))
 		{
 			// Successfully stored callback first
-			return;
+
+			return true;
 		}
 		else if (expectedState == CallbackRaceState::Value)
 		{
 			m_continuation();
 			m_continuation = nullptr;
 		}
+
+		return false;
 	}
 
 	HeldValue GetHeldValueType() const

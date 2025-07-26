@@ -3,12 +3,31 @@
 
 // Cortado
 //
+#include <Cortado/Concepts/PreAndPostAction.h>
 #include <Cortado/Concepts/TaskImpl.h>
 #include <Cortado/Detail/AtomicRefCount.h>
 #include <Cortado/Detail/CoroutineStorage.h>
+#include <coroutine>
+#include <type_traits>
 
 namespace Cortado::Detail
 {
+
+struct None
+{
+};
+
+template <typename T, bool FHasAdditionalStorage>
+struct AdditionalStorageHelper
+{
+	using AdditionalStorageT = typename T::AdditionalStorage;
+};
+
+template <typename T>
+struct AdditionalStorageHelper<T, false>
+{
+	using AdditionalStorageT = None;
+};
 
 template <Concepts::TaskImpl T, typename R>
 struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
@@ -29,6 +48,7 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 
 			std::coroutine_handle<> await_suspend(std::coroutine_handle<>) noexcept
 			{
+				_this.BeforeSuspend();
 				auto next = _this.m_storage.Continuation();
 				if (next == nullptr)
 				{
@@ -40,6 +60,7 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 
 			void await_resume() noexcept
 			{
+				// no _this.BeforeResume as the frame is expected to be destroyed
 			}
 
 			CoroutinePromiseBase& _this;
@@ -58,13 +79,37 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 		return m_storage.GetHeldValueType() != HeldValue::None;
 	}
 
-	void SetContinuation(std::coroutine_handle<> h)
+	bool SetContinuation(std::coroutine_handle<> h)
 	{
-		m_storage.SetContinuation(h);
+		return m_storage.SetContinuation(h);
+	}
+
+	std::coroutine_handle<> GetContinuation()
+	{
+		return m_storage.Continuation();
+	}
+
+	void BeforeSuspend()
+	{
+		if constexpr (Concepts::HasAdditionalStorage<T>)
+		{
+			T::OnBeforeSuspend(m_additionalStorage);
+		}
+	}
+
+	void BeforeResume()
+	{
+		if constexpr (Concepts::HasAdditionalStorage<T>)
+		{
+			T::OnBeforeResume(m_additionalStorage);
+		}
 	}
 
 protected:
+	using AdditionalStorageT = AdditionalStorageHelper<T, Concepts::HasAdditionalStorage<T>>;
+
 	CoroutineStorage<R, typename T::Exception, typename T::Atomic> m_storage;
+	[[no_unique_address]] AdditionalStorageT m_additionalStorage;
 
 	void RethrowError()
 	{

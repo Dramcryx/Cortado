@@ -20,7 +20,6 @@
 namespace Cortado
 {
 using DefaultScheduler = Common::MacOSCoroutineScheduler;
-using AtomicCompareExchange = Common::MacOSAtomicCompareExchange;
 } // namespace Cortado
 
 #ifndef CORTADO_DEFAULT_YIELD

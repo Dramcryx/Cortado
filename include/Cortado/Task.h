@@ -74,6 +74,9 @@ template <typename R = void, Concepts::TaskImpl T = DefaultTaskImpl>
 class Task
 {
 public:
+	struct TaskAwaiter;
+	struct TaskLValueAwaier;
+
 	using promise_type = PromiseType<T, R>;
 
 	Task(std::coroutine_handle<PromiseType<T, R>> h) :
@@ -81,9 +84,25 @@ public:
 	{
 	}
 
+	Task(Task&& other) noexcept
+	{
+		m_handle = std::exchange(other.m_handle, nullptr);
+	}
+
+	Task& operator=(Task&& other) noexcept
+	{
+		Reset();
+		m_handle = std::exchange(other.m_handle, nullptr);
+
+		return *this;
+	}
+
+	Task(const Task&) = delete;
+	Task& operator=(const Task&) = delete;
+
 	~Task()
 	{
-		if (m_handle.promise().Release() == 0)
+		if (m_handle && m_handle.promise().Release() == 0)
 		{
 			m_handle.destroy();
 		}
@@ -96,24 +115,16 @@ public:
 		return m_handle.promise().Get();
 	}
 
-	bool await_ready()
-	{
-		return m_handle.promise().Ready();
-	}
-
-	template <Concepts::TaskImpl T2, typename R2>
-	void await_suspend(std::coroutine_handle<PromiseType<T2, R2>> h)
-	{
-		m_handle.promise().SetContinuation(h);
-	}
-
-	decltype(auto) await_resume()
-	{
-		return Get();
-	}
-
 private:
 	std::coroutine_handle<PromiseType<T, R>> m_handle;
+
+	void Reset()
+	{
+		if (m_handle.promise().Release() == 0)
+		{
+			m_handle.destroy();
+		}
+	}
 };
 
 template <Concepts::TaskImpl T, typename R>

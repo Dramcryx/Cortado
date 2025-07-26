@@ -25,7 +25,14 @@ if (APPLE)
   target_include_directories(native_example PUBLIC ./include)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-fsanitize=leak)
-    add_link_options(-fsanitize=leak)  # Needed for runtime support
-endif()
+include(FetchContent)
+
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.17.0 # Use a specific release tag or commit hash
+)
+
+FetchContent_MakeAvailable(googletest)
+
+include(tests/CMakeLists.txt)
