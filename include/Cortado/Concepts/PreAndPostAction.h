@@ -4,6 +4,7 @@
 // STL
 //
 #include <concepts>
+#include <type_traits>
 
 namespace Cortado::Concepts
 {
@@ -12,6 +13,7 @@ template <typename T>
 concept HasAdditionalStorage = requires
 {
     typename T::AdditionalStorage;
+    std::is_default_constructible_v<typename T::AdditionalStorage>;
 };
 
 template <typename T>

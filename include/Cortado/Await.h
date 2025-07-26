@@ -3,10 +3,9 @@
 
 // Cortado
 //
-#include "Cortado/Concepts/TaskImpl.h"
+#include "Cortado/Concepts/CoroutineScheduler.h"
 #include <Cortado/Concepts/BackgroundResumable.h>
 #include <Cortado/Task.h>
-#include <coroutine>
 
 namespace Cortado
 {
@@ -36,6 +35,7 @@ protected:
 	{
 		m_handle = h;
 		m_beforeResumeFunc = Detail::BeforeResumeFunc<T, R>;
+		h.promise().BeforeSuspend();
 	}
 
 	inline void await_resume()
@@ -68,10 +68,7 @@ struct Task<R, T>::TaskAwaiter : AwaiterBase
 	void await_suspend(std::coroutine_handle<Cortado::PromiseType<T2, R2>> h)
 	{
 		Base::await_suspend(h);
-		if (m_awaitedTask.m_handle.promise().SetContinuation(h))
-		{
-			h.promise().BeforeSuspend();
-		}
+		m_awaitedTask.m_handle.promise().SetContinuation(h);
 	}
 
 	R await_resume()
@@ -106,10 +103,7 @@ struct Task<R, T>::TaskLValueAwaier : AwaiterBase
 	void await_suspend(std::coroutine_handle<Cortado::PromiseType<T2, R2>> h)
 	{
 		Base::await_suspend(h);
-		if (m_awaitedTask.m_handle.promise().SetContinuation(h))
-		{
-			h.promise().BeforeSuspend();
-		}
+		m_awaitedTask.m_handle.promise().SetContinuation(h);
 	}
 
 	using Base::await_resume;
@@ -136,7 +130,6 @@ struct ResumeBackgroundAwaiter : AwaiterBase
 	{
 		Base::await_suspend(h);
 
-		h.promise().BeforeSuspend();
 		T::GetDefaultBackgroundScheduler().Schedule(h);
 	}
 
@@ -155,9 +148,42 @@ inline ResumeBackgroundAwaiter ResumeBackground()
 template <Concepts::TaskImpl T, typename R, typename ... Args>
 Task<void, T> WhenAll(Task<R, T>& first, Args&& ... next)
 {
-	co_await std::forward<Task<R, T>>(first);
+	co_await first;
 	(void(co_await next), ...);
 }
+
+template <Concepts::CoroutineScheduler T>
+struct CoroutineSchedulerAwaiter : AwaiterBase
+{
+	CoroutineSchedulerAwaiter(T& sched) :
+		m_scheduler{sched}
+	{
+	}
+
+	bool await_ready()
+	{
+		return false;
+	}
+
+	template <Concepts::TaskImpl TTask, typename R>
+	void await_suspend(std::coroutine_handle<Cortado::PromiseType<TTask, R>> h)
+	{
+		Base::await_suspend(h);
+
+		m_scheduler.Schedule(h);
+	}
+
+	using AwaiterBase::await_resume;
+
+private:
+	T& m_scheduler;
+};
+
+template <Concepts::CoroutineScheduler T>
+auto operator co_await(T& sched)
+{
+	return CoroutineSchedulerAwaiter{sched};
+};
 
 } // namespace Cortado
 

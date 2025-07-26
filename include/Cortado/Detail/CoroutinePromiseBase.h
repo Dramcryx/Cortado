@@ -7,8 +7,6 @@
 #include <Cortado/Concepts/TaskImpl.h>
 #include <Cortado/Detail/AtomicRefCount.h>
 #include <Cortado/Detail/CoroutineStorage.h>
-#include <coroutine>
-#include <type_traits>
 
 namespace Cortado::Detail
 {
@@ -43,19 +41,19 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 		{
 			bool await_ready() noexcept
 			{
-				return _this.Release() == 0;
+				return false;
 			}
 
-			std::coroutine_handle<> await_suspend(std::coroutine_handle<>) noexcept
+			bool await_suspend(std::coroutine_handle<>) noexcept
 			{
 				_this.BeforeSuspend();
 				auto next = _this.m_storage.Continuation();
-				if (next == nullptr)
+				if (next != nullptr)
 				{
-					return std::noop_coroutine();
+					next();
 				}
 
-				return next;
+				return _this.Release() > 0;
 			}
 
 			void await_resume() noexcept
@@ -106,7 +104,8 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 	}
 
 protected:
-	using AdditionalStorageT = AdditionalStorageHelper<T, Concepts::HasAdditionalStorage<T>>;
+	using AdditionalStorageT =
+		AdditionalStorageHelper<T, Concepts::HasAdditionalStorage<T>>::AdditionalStorageT;
 
 	CoroutineStorage<R, typename T::Exception, typename T::Atomic> m_storage;
 	[[no_unique_address]] AdditionalStorageT m_additionalStorage;

@@ -3,7 +3,6 @@
 
 // Cortado
 //
-#include "Cortado/Concepts/TaskImpl.h"
 #include <Cortado/Concepts/Atomic.h>
 
 // STL

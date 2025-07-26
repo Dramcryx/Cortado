@@ -102,15 +102,17 @@ public:
 
 	~Task()
 	{
-		if (m_handle && m_handle.promise().Release() == 0)
-		{
-			m_handle.destroy();
-		}
+		Reset();
+	}
+
+	inline bool IsReady() const
+	{
+		return m_handle.promise().Ready();
 	}
 
 	decltype(auto) Get()
 	{
-		for (; !m_handle.promise().Ready(););
+		for (; !IsReady(););
 			
 		return m_handle.promise().Get();
 	}
@@ -120,7 +122,7 @@ private:
 
 	void Reset()
 	{
-		if (m_handle.promise().Release() == 0)
+		if (m_handle && m_handle.promise().Release() == 0)
 		{
 			m_handle.destroy();
 		}

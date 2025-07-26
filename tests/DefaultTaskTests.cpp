@@ -1,3 +1,4 @@
+#include "Cortado/DefaultTaskImpl.h"
 #include <gtest/gtest.h>
 
 // Cortado
@@ -6,9 +7,9 @@
 
 // STL
 //
-#include <mach/task.h>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 
 template <typename T>
 using Task = Cortado::Task<T>;
@@ -109,4 +110,45 @@ TEST(DefaultTaskTests, AwaitForOtherTaskOnDifferentThreads)
 
     EXPECT_EQ(firstTaskValue + secondTaskAdds, task2(task1ThreadId).Get());
     EXPECT_NE(std::this_thread::get_id(), task1ThreadId);
+}
+
+TEST(DefaultTaskTests, WhenAll)
+{
+    static auto task1 = [] () -> Task<int>
+    {
+        co_await Cortado::ResumeBackground();
+
+        co_return rand();
+    };
+
+    Task<int> tasks[] = {task1(), task1(), task1()};
+
+    Cortado::WhenAll(tasks[0], tasks[1], tasks[2]).Get();
+
+    EXPECT_TRUE(tasks[0].IsReady());
+    EXPECT_TRUE(tasks[1].IsReady());
+    EXPECT_TRUE(tasks[2].IsReady());
+}
+
+TEST(DefaultTaskTests, AwaitOnScheduler)
+{
+    using SchedulerT =
+        std::remove_cvref_t<decltype(Cortado::DefaultTaskImpl::GetDefaultBackgroundScheduler())>;
+
+    using Cortado::operator co_await;
+
+    auto testThreadId = std::this_thread::get_id();
+    auto backgroundThreadId = testThreadId;
+
+    static auto task1 = [&] () -> Task<void>
+    {
+        SchedulerT sched;
+        co_await sched;
+
+        backgroundThreadId = std::this_thread::get_id();
+    };
+
+    task1().Get();
+
+    EXPECT_NE(testThreadId, backgroundThreadId);
 }
