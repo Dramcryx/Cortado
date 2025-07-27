@@ -8,7 +8,6 @@
 // STL
 //
 #include <mutex>
-#include <thread>
 #include <unordered_map>
 
 struct UserStorage
@@ -81,9 +80,7 @@ TEST(DefaultTaskWithAdditionalStorageTests, ResumeBackgroundTest)
         co_await Cortado::ResumeBackground();
     };
 
-    {
-        task().Get();
-    }
+    task().Get();
 
     unsigned long beforeSuspend = 0;
     unsigned long beforeResume = 0;
