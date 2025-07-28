@@ -14,6 +14,17 @@ concept CoroutineAllocator = requires(T t, void *p, std::size_t s) {
     { t.allocate(s) } -> std::same_as<void *>;
 };
 
+template <typename T>
+concept HasCoroutineAllocator = requires {
+    // Allocator type is defined
+    //
+    typename T::Allocator;
+
+    // T::Allocator satisfies concept
+    //
+    CoroutineAllocator<typename T::Allocator>;
+};
+
 } // namespace Cortado::Concepts
 
 #endif

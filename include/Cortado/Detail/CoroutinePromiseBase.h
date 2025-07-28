@@ -8,8 +8,19 @@
 #include <Cortado/Detail/AtomicRefCount.h>
 #include <Cortado/Detail/CoroutineStorage.h>
 
+// STL
+//
+#include <coroutine>
+
 namespace Cortado::Detail
 {
+
+enum class CallbackRaceState : unsigned long
+{
+    None = 0,
+    Value,
+    Callback
+};
 
 struct None
 {
@@ -47,7 +58,10 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
             bool await_suspend(std::coroutine_handle<>) noexcept
             {
                 _this.BeforeSuspend();
-                auto next = _this.m_storage.Continuation();
+                _this.m_completionEvent.Set();
+                _this.CallbackValueRendezvous();
+
+                auto next = _this.Continuation();
                 if (next != nullptr)
                 {
                     next();
@@ -75,12 +89,38 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 
     bool Ready()
     {
-        return m_storage.GetHeldValueType() != HeldValue::None;
+        return m_completionEvent.IsSet();
+    }
+
+    void Wait()
+    {
+        m_completionEvent.Wait();
+    }
+
+    bool WaitFor(unsigned long timeToWaitMs)
+    {
+        return m_completionEvent.WaitFor(timeToWaitMs);
     }
 
     bool SetContinuation(std::coroutine_handle<> h)
     {
-        return m_storage.SetContinuation(h);
+        m_continuation = h;
+        CallbackRaceState expectedState = CallbackRaceState::None;
+        if (m_callbackRace.compare_exchange_strong(
+                *reinterpret_cast<unsigned long *>(&expectedState),
+                static_cast<unsigned long>(CallbackRaceState::Callback)))
+        {
+            // Successfully stored callback first
+
+            return true;
+        }
+        else if (expectedState == CallbackRaceState::Value)
+        {
+            m_continuation();
+            m_continuation = nullptr;
+        }
+
+        return false;
     }
 
     std::coroutine_handle<> GetContinuation()
@@ -104,12 +144,45 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         }
     }
 
+    void CallbackValueRendezvous()
+    {
+        CallbackRaceState expectedState = CallbackRaceState::None;
+        if (m_callbackRace.compare_exchange_strong(
+                *reinterpret_cast<unsigned long *>(&expectedState),
+                static_cast<unsigned long>(CallbackRaceState::Value)))
+        {
+            // Successfully stored value first
+            return;
+        }
+        else if (expectedState == CallbackRaceState::Callback)
+        {
+            // Callback was already set, do the rendezvous
+            m_continuation();
+            m_continuation = nullptr;
+        }
+    }
+
 protected:
+    using ExceptionT = typename T::Exception;
+    using AtomicT = typename T::Atomic;
+    using EventT = typename T::Event;
     using AdditionalStorageT =
         AdditionalStorageHelper<T, Concepts::HasAdditionalStorage<T>>::
             AdditionalStorageT;
 
-    CoroutineStorage<R, typename T::Exception, typename T::Atomic> m_storage;
+    // Essential storage - stores value or exception
+    CoroutineStorage<R, ExceptionT, AtomicT> m_storage;
+
+    // Race flag between possible continuation and coroutine
+    AtomicT m_callbackRace{static_cast<unsigned long>(CallbackRaceState::None)};
+
+    // Completion flag
+    EventT m_completionEvent;
+
+    // Continuation - the coroutine that awaits for this one, if any
+    std::coroutine_handle<> m_continuation = nullptr;
+
+    // Optional user storage
     [[no_unique_address]] AdditionalStorageT m_additionalStorage;
 
     void RethrowError()
@@ -118,6 +191,11 @@ protected:
         {
             T::Rethrow(std::move(m_storage.UnsafeError()));
         }
+    }
+
+    std::coroutine_handle<> &Continuation()
+    {
+        return m_continuation;
     }
 };
 

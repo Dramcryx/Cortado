@@ -3,6 +3,8 @@
 
 // POSIX
 //
+#include <ctime>
+#include <errno.h>
 #include <pthread.h>
 
 namespace Cortado::Common
@@ -11,10 +13,11 @@ namespace Cortado::Common
 class PosixEvent
 {
 public:
-    PosixEvent(bool initiallySignaled = false) : m_signaled{initiallySignaled}
+    PosixEvent(bool initiallySignaled = false) :
+        m_signaled{initiallySignaled}
     {
-        pthread_mutex_init(&m_mutex, nullptr);
-        pthread_cond_init(&m_cv, nullptr);
+        m_mutex = PTHREAD_MUTEX_INITIALIZER;
+        m_cv = PTHREAD_COND_INITIALIZER;
         m_signaled = false;
     }
 
@@ -40,12 +43,41 @@ public:
         }
     }
 
-    void Signal()
+    bool WaitFor(unsigned long timeToWaitMs)
+    {
+        int result = 0;
+        for (;!m_signaled && result == 0;)
+        {
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+
+            ts.tv_nsec += timeToWaitMs * 1000000;
+
+            if (ts.tv_nsec >= 1000000000) {
+                ts.tv_nsec -= 1000000000;
+                ts.tv_sec  += 1;
+            }
+
+            PthreadAutoLock autoLock{&m_mutex};
+
+            result = pthread_cond_timedwait(&m_cv, &m_mutex, &ts);
+        }
+    
+        return m_signaled;
+    }
+
+    void Set()
     {
         PthreadAutoLock autoLock{&m_mutex};
 
         m_signaled = true;
         pthread_cond_broadcast(&m_cv);
+    }
+
+    bool IsSet()
+    {
+        PthreadAutoLock autoLock{&m_mutex};
+        return m_signaled;
     }
 
 private:

@@ -3,7 +3,6 @@
 
 // Cortado
 //
-#include "Cortado/Concepts/CoroutineScheduler.h"
 #include <Cortado/Concepts/BackgroundResumable.h>
 #include <Cortado/Task.h>
 

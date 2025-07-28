@@ -1,3 +1,4 @@
+#include <chrono>
 #include <gtest/gtest.h>
 
 // Cortado
@@ -72,6 +73,7 @@ TEST(DefaultTaskTests, AwaitForOtherTaskOnSameThread)
 {
     static constexpr int firstTaskValue = 32;
     static constexpr int secondTaskAdds = 1;
+
     static auto task1 = []() -> Task<int>
     {
         co_return firstTaskValue;
@@ -149,4 +151,19 @@ TEST(DefaultTaskTests, AwaitOnScheduler)
     task1().Get();
 
     EXPECT_NE(testThreadId, backgroundThreadId);
+}
+
+TEST(DefaultTaskTests, SyncWait)
+{
+    static auto task1 = [&]() -> Task<void>
+    {
+        co_await Cortado::ResumeBackground();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    };
+
+    auto taskObject = task1();
+
+    EXPECT_FALSE(taskObject.WaitFor(10));
+    EXPECT_TRUE(taskObject.WaitFor(600));
 }

@@ -14,7 +14,7 @@ namespace Cortado::Concepts
 // 3) Atomic compare exchange.
 //
 template <typename T>
-concept Atomic = requires(T t, unsigned long &expected, unsigned long desired) {
+concept Atomic = requires(T t, unsigned long &expected, unsigned long desired) { 
     { T{1} };
     { t.operator++() } -> std::same_as<unsigned long>;
     { t.operator--() } -> std::same_as<unsigned long>;

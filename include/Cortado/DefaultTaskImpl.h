@@ -13,18 +13,10 @@
 //
 #include <Cortado/Common/MacOSCoroutineScheduler.h>
 
-// POSIX
-//
-#include <pthread.h>
-
 namespace Cortado
 {
 using DefaultScheduler = Common::MacOSCoroutineScheduler;
 } // namespace Cortado
-
-#ifndef CORTADO_DEFAULT_YIELD
-#define CORTADO_DEFAULT_YIELD pthread_yield_np
-#endif
 
 #elif defined(_WIN32)
 
@@ -41,12 +33,22 @@ namespace Cortado
 using DefaultScheduler = Common::Win32CoroutineScheduler;
 } // namespace Cortado
 
-#ifndef CORTADO_DEFAULT_YIELD
-#define CORTADO_DEFAULT_YIELD YieldProcessor
-#endif
-
 #else
 #error "Linux is not implemented yet"
+#endif
+
+#if defined(_WIN32)
+#elif defined (_POSIX_VERSION)
+
+// Cortado
+//
+#include <Cortado/Common/PosixEvent.h>
+
+namespace Cortado
+{
+using DefaultEvent = Common::PosixEvent;
+} // namespace Cortado
+
 #endif
 
 namespace Cortado
@@ -58,10 +60,7 @@ struct DefaultTaskImpl :
     Cortado::Common::STLExceptionHandler,
     DefaultScheduler
 {
-    inline static void YieldCurrentThread()
-    {
-        CORTADO_DEFAULT_YIELD();
-    }
+    using Event = DefaultEvent;
 };
 
 } // namespace Cortado

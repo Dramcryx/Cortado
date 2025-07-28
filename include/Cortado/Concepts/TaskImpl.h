@@ -6,6 +6,7 @@
 #include <Cortado/Concepts/Atomic.h>
 #include <Cortado/Concepts/CoroutineAllocator.h>
 #include <Cortado/Concepts/ErrorHandler.h>
+#include <Cortado/Concepts/Event.h>
 
 namespace Cortado::Concepts
 {
@@ -17,16 +18,7 @@ namespace Cortado::Concepts
 // 4) Defines yielding function for synchronous wait.
 //
 template <typename T>
-concept TaskImpl = ErrorHandler<T> && HasAtomic<T> && requires {
-    // Provides allocator type
-    //
-    typename T::Allocator;
-    CoroutineAllocator<typename T::Allocator>;
-
-    // Thread yielder func
-    //
-    { T::YieldCurrentThread() };
-};
+concept TaskImpl = ErrorHandler<T> && HasAtomic<T> && HasEvent<T> && HasCoroutineAllocator<T>;
 
 } // namespace Cortado::Concepts
 

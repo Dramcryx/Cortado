@@ -39,9 +39,8 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     }
 
     template <typename Class, typename... Args>
-        requires(
-            !std::convertible_to<std::remove_cvref_t<Class> &, Allocator &>)
     static void *operator new(std::size_t size, Class &, Allocator a, Args...)
+        requires(!std::convertible_to<std::remove_cvref_t<Class> &, Allocator &>)
     {
         return operator new(size, a);
     }
@@ -87,6 +86,7 @@ public:
 
     Task(Task &&other) noexcept
     {
+        Reset();
         m_handle = std::exchange(other.m_handle, nullptr);
     }
 
@@ -111,10 +111,19 @@ public:
         return m_handle.promise().Ready();
     }
 
+    inline void Wait()
+    {
+        m_handle.promise().Wait();
+    }
+
+    inline bool WaitFor(unsigned long timeToWaitMs)
+    {
+        return m_handle.promise().WaitFor(timeToWaitMs);
+    }
+
     decltype(auto) Get()
     {
-        for (; !IsReady();)
-            ;
+        m_handle.promise().Wait();
 
         return m_handle.promise().Get();
     }
