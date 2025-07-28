@@ -9,8 +9,7 @@ namespace Cortado::Concepts
 {
 
 template <typename T>
-concept Event = requires(T t)
-{
+concept Event = requires(T t) {
     { t.Wait() } -> std::same_as<void>;
     { t.Singal() } -> std::same_as<void>;
 };

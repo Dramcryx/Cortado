@@ -11,19 +11,18 @@ namespace Cortado::Common
 class PosixEvent
 {
 public:
-    PosixEvent(bool initiallySignaled = false) :
-        m_signaled{initiallySignaled}
+    PosixEvent(bool initiallySignaled = false) : m_signaled{initiallySignaled}
     {
         pthread_mutex_init(&m_mutex, nullptr);
         pthread_cond_init(&m_cv, nullptr);
         m_signaled = false;
     }
 
-    PosixEvent(const PosixEvent&) = delete;
-    PosixEvent& operator=(const PosixEvent&) = delete;
+    PosixEvent(const PosixEvent &) = delete;
+    PosixEvent &operator=(const PosixEvent &) = delete;
 
-    PosixEvent(PosixEvent&&) = delete;
-    PosixEvent& operator=(PosixEvent&&) = delete;
+    PosixEvent(PosixEvent &&) = delete;
+    PosixEvent &operator=(PosixEvent &&) = delete;
 
     ~PosixEvent()
     {
@@ -56,14 +55,13 @@ private:
 
     struct PthreadAutoLock
     {
-        pthread_mutex_t* m_mutex;
+        pthread_mutex_t *m_mutex;
 
-        PthreadAutoLock(pthread_mutex_t* mutex) :
-            m_mutex{mutex}
+        PthreadAutoLock(pthread_mutex_t *mutex) : m_mutex{mutex}
         {
             pthread_mutex_lock(m_mutex);
         }
-    
+
         ~PthreadAutoLock()
         {
             pthread_mutex_unlock(m_mutex);

@@ -14,9 +14,8 @@ namespace Cortado::Concepts
 // task can be offloaded.
 //
 template <typename T>
-concept BackgroundResumable = TaskImpl<T> && requires
-{
-	{ T::GetDefaultBackgroundScheduler() } -> CoroutineScheduler;
+concept BackgroundResumable = TaskImpl<T> && requires {
+    { T::GetDefaultBackgroundScheduler() } -> CoroutineScheduler;
 };
 
 } // namespace Cortado::Concepts

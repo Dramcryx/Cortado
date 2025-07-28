@@ -19,121 +19,124 @@ class Task;
 template <Concepts::TaskImpl T, typename R>
 struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
 {
-	using Allocator = typename T::Allocator;
+    using Allocator = typename T::Allocator;
 
-	PromiseType()
-	{
-		static_assert(std::is_default_constructible_v<Allocator>);
-	}
+    PromiseType()
+    {
+        static_assert(std::is_default_constructible_v<Allocator>);
+    }
 
-	template <typename ... TArgs>
-	PromiseType(TArgs&& ... args) :
-		PromiseType{ AllocatorSearchTag{}, std::forward<TArgs>(args)... }
-	{
-	}
+    template <typename... TArgs>
+    PromiseType(TArgs &&...args) :
+        PromiseType{AllocatorSearchTag{}, std::forward<TArgs>(args)...}
+    {
+    }
 
-	template <typename ... Args>
-	static void* operator new(std::size_t size, Allocator a, Args...)
-	{
-		return a.allocate(size);
-	}
+    template <typename... Args>
+    static void *operator new(std::size_t size, Allocator a, Args...)
+    {
+        return a.allocate(size);
+    }
 
-	template <typename Class, typename ... Args>
-		requires (!std::convertible_to<std::remove_cvref_t<Class>&, Allocator&>)
-	static void* operator new(std::size_t size, Class&, Allocator a, Args...)
-	{
-		return operator new(size, a);
-	}
+    template <typename Class, typename... Args>
+        requires(
+            !std::convertible_to<std::remove_cvref_t<Class> &, Allocator &>)
+    static void *operator new(std::size_t size, Class &, Allocator a, Args...)
+    {
+        return operator new(size, a);
+    }
 
-	static void* operator new(std::size_t size)
-	{
-		return operator new(size, Allocator{});
-	}
+    static void *operator new(std::size_t size)
+    {
+        return operator new(size, Allocator{});
+    }
 
-	Task<R, T> get_return_object();
+    Task<R, T> get_return_object();
 
 private:
-	Allocator m_alloc;
+    Allocator m_alloc;
 
-	struct AllocatorSearchTag {};
+    struct AllocatorSearchTag
+    {
+    };
 
-	template <typename ... TArgs>
-	PromiseType(AllocatorSearchTag, Allocator al, TArgs&& ... args) :
-		m_alloc{ al }
-	{
-	}
+    template <typename... TArgs>
+    PromiseType(AllocatorSearchTag, Allocator al, TArgs &&...args) : m_alloc{al}
+    {
+    }
 
-	template <typename ... TArgs>
-	PromiseType(AllocatorSearchTag, TArgs&& ... args)
-	{
-		static_assert(std::is_default_constructible_v<Allocator>);
-	}
+    template <typename... TArgs>
+    PromiseType(AllocatorSearchTag, TArgs &&...args)
+    {
+        static_assert(std::is_default_constructible_v<Allocator>);
+    }
 };
 
 template <typename R = void, Concepts::TaskImpl T = DefaultTaskImpl>
 class Task
 {
 public:
-	struct TaskAwaiter;
-	struct TaskLValueAwaier;
+    struct TaskAwaiter;
+    struct TaskLValueAwaier;
 
-	using promise_type = PromiseType<T, R>;
+    using promise_type = PromiseType<T, R>;
 
-	Task(std::coroutine_handle<PromiseType<T, R>> h) :
-		m_handle{ h }
-	{
-	}
+    Task(std::coroutine_handle<PromiseType<T, R>> h) : m_handle{h}
+    {
+    }
 
-	Task(Task&& other) noexcept
-	{
-		m_handle = std::exchange(other.m_handle, nullptr);
-	}
+    Task(Task &&other) noexcept
+    {
+        m_handle = std::exchange(other.m_handle, nullptr);
+    }
 
-	Task& operator=(Task&& other) noexcept
-	{
-		Reset();
-		m_handle = std::exchange(other.m_handle, nullptr);
+    Task &operator=(Task &&other) noexcept
+    {
+        Reset();
+        m_handle = std::exchange(other.m_handle, nullptr);
 
-		return *this;
-	}
+        return *this;
+    }
 
-	Task(const Task&) = delete;
-	Task& operator=(const Task&) = delete;
+    Task(const Task &) = delete;
+    Task &operator=(const Task &) = delete;
 
-	~Task()
-	{
-		Reset();
-	}
+    ~Task()
+    {
+        Reset();
+    }
 
-	inline bool IsReady() const
-	{
-		return m_handle.promise().Ready();
-	}
+    inline bool IsReady() const
+    {
+        return m_handle.promise().Ready();
+    }
 
-	decltype(auto) Get()
-	{
-		for (; !IsReady(););
-			
-		return m_handle.promise().Get();
-	}
+    decltype(auto) Get()
+    {
+        for (; !IsReady();)
+            ;
+
+        return m_handle.promise().Get();
+    }
 
 private:
-	std::coroutine_handle<PromiseType<T, R>> m_handle;
+    std::coroutine_handle<PromiseType<T, R>> m_handle;
 
-	void Reset()
-	{
-		if (m_handle && m_handle.promise().Release() == 0)
-		{
-			m_handle.destroy();
-		}
-	}
+    void Reset()
+    {
+        if (m_handle && m_handle.promise().Release() == 0)
+        {
+            m_handle.destroy();
+        }
+    }
 };
 
 template <Concepts::TaskImpl T, typename R>
 Task<R, T> PromiseType<T, R>::get_return_object()
 {
-	this->AddRef();
-	return Task<R, T>{std::coroutine_handle<PromiseType<T, R>>::from_promise(*this)};
+    this->AddRef();
+    return Task<R, T>{
+        std::coroutine_handle<PromiseType<T, R>>::from_promise(*this)};
 }
 
 } // namespace Cortado

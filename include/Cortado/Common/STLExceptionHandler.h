@@ -17,7 +17,7 @@ struct STLExceptionHandler
         return std::current_exception();
     }
 
-    inline static void Rethrow(std::exception_ptr&& eptr)
+    inline static void Rethrow(std::exception_ptr &&eptr)
     {
         std::rethrow_exception(eptr);
     }

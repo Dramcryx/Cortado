@@ -12,18 +12,18 @@ template <Concepts::Atomic T>
 class AtomicRefCount
 {
 public:
-	int AddRef() noexcept
-	{
-		return ++m_refCount;
-	}
+    unsigned long AddRef() noexcept
+    {
+        return ++m_refCount;
+    }
 
-	int Release() noexcept
-	{
-		return --m_refCount;
-	}
+    unsigned long Release() noexcept
+    {
+        return --m_refCount;
+    }
 
 private:
-	T m_refCount{ 1 };
+    T m_refCount{1};
 };
 
 } // namespace Cortado::Detail

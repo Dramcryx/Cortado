@@ -10,17 +10,15 @@ namespace Cortado::Concepts
 {
 
 template <typename T>
-concept HasAdditionalStorage = requires
-{
+concept HasAdditionalStorage = requires {
     typename T::AdditionalStorage;
     std::is_default_constructible_v<typename T::AdditionalStorage>;
 };
 
 template <typename T>
 concept PreAndPostAction =
-    HasAdditionalStorage<T>
-    && requires (typename T::AdditionalStorage& additionalStorage)
-    {
+    HasAdditionalStorage<T> &&
+    requires(typename T::AdditionalStorage &additionalStorage) {
         { T::OnBeforeSuspend(additionalStorage) } -> std::same_as<void>;
         { T::OnBeforeResume(additionalStorage) } -> std::same_as<void>;
     };

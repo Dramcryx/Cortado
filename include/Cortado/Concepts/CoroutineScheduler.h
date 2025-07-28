@@ -12,10 +12,10 @@ namespace Cortado::Concepts
 // allows for scheduling coroutines.
 //
 template <typename T>
-concept CoroutineScheduler = requires(std::remove_reference_t<T> t, std::coroutine_handle<> h)
-{
-	{ t.Schedule(h) };
-};
+concept CoroutineScheduler =
+    requires(std::remove_reference_t<T> t, std::coroutine_handle<> h) {
+        { t.Schedule(h) };
+    };
 
 } // namespace Cortado::Concepts
 

@@ -1,4 +1,3 @@
-#include "Cortado/DefaultTaskImpl.h"
 #include <gtest/gtest.h>
 
 // Cortado
@@ -18,7 +17,7 @@ using ThreadIdT = decltype(std::this_thread::get_id());
 
 TEST(DefaultTaskTests, CompletedFromValue)
 {
-    auto task = [] () -> Task<int>
+    auto task = []() -> Task<int>
     {
         co_return 42;
     };
@@ -28,7 +27,7 @@ TEST(DefaultTaskTests, CompletedFromValue)
 
 TEST(DefaultTaskTests, CompletedFromStdException)
 {
-    auto task = [] () -> Task<int>
+    auto task = []() -> Task<int>
     {
         throw std::runtime_error("From test");
         co_return 42;
@@ -41,7 +40,7 @@ TEST(DefaultTaskTests, CompletedInBackgroundThread)
 {
     ThreadIdT testThreadId = std::this_thread::get_id();
 
-    auto task = [] () -> Task<ThreadIdT>
+    auto task = []() -> Task<ThreadIdT>
     {
         co_await Cortado::ResumeBackground();
         co_return std::this_thread::get_id();
@@ -54,7 +53,7 @@ TEST(DefaultTaskTests, RethrowFromBackgroundThread)
 {
     ThreadIdT testThreadId = std::this_thread::get_id();
 
-    auto task = [] (ThreadIdT& out) -> Task<void>
+    auto task = [](ThreadIdT &out) -> Task<void>
     {
         co_await Cortado::ResumeBackground();
         out = std::this_thread::get_id();
@@ -73,16 +72,15 @@ TEST(DefaultTaskTests, AwaitForOtherTaskOnSameThread)
 {
     static constexpr int firstTaskValue = 32;
     static constexpr int secondTaskAdds = 1;
-    static auto task1 = [] () -> Task<int>
+    static auto task1 = []() -> Task<int>
     {
         co_return firstTaskValue;
     };
 
-    static auto task2 = [] () -> Task<int>
+    static auto task2 = []() -> Task<int>
     {
         co_return (co_await task1()) + secondTaskAdds;
     };
-
 
     EXPECT_EQ(firstTaskValue + secondTaskAdds, task2().Get());
 }
@@ -94,7 +92,7 @@ TEST(DefaultTaskTests, AwaitForOtherTaskOnDifferentThreads)
 
     ThreadIdT task1ThreadId;
 
-    static auto task1 = [] (ThreadIdT& out) -> Task<int>
+    static auto task1 = [](ThreadIdT &out) -> Task<int>
     {
         co_await Cortado::ResumeBackground();
 
@@ -103,7 +101,7 @@ TEST(DefaultTaskTests, AwaitForOtherTaskOnDifferentThreads)
         co_return firstTaskValue;
     };
 
-    static auto task2 = [] (ThreadIdT& out) -> Task<int>
+    static auto task2 = [](ThreadIdT &out) -> Task<int>
     {
         co_return (co_await task1(out)) + secondTaskAdds;
     };
@@ -114,7 +112,7 @@ TEST(DefaultTaskTests, AwaitForOtherTaskOnDifferentThreads)
 
 TEST(DefaultTaskTests, WhenAll)
 {
-    static auto task1 = [] () -> Task<int>
+    static auto task1 = []() -> Task<int>
     {
         co_await Cortado::ResumeBackground();
 
@@ -132,15 +130,15 @@ TEST(DefaultTaskTests, WhenAll)
 
 TEST(DefaultTaskTests, AwaitOnScheduler)
 {
-    using SchedulerT =
-        std::remove_cvref_t<decltype(Cortado::DefaultTaskImpl::GetDefaultBackgroundScheduler())>;
+    using SchedulerT = std::remove_cvref_t<
+        decltype(Cortado::DefaultTaskImpl::GetDefaultBackgroundScheduler())>;
 
     using Cortado::operator co_await;
 
     auto testThreadId = std::this_thread::get_id();
     auto backgroundThreadId = testThreadId;
 
-    static auto task1 = [&] () -> Task<void>
+    static auto task1 = [&]() -> Task<void>
     {
         SchedulerT sched;
         co_await sched;

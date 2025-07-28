@@ -12,7 +12,7 @@ struct STLAllocator
 {
     std::allocator<std::byte> m_allocator;
 
-    void* allocate(std::size_t size)
+    void *allocate(std::size_t size)
     {
         return m_allocator.allocate(size);
     }

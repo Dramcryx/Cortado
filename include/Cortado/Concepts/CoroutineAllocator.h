@@ -10,9 +10,8 @@ namespace Cortado::Concepts
 {
 
 template <typename T>
-concept CoroutineAllocator = requires(T t, void* p, std::size_t s)
-{
-    { t.allocate(s) } -> std::same_as<void*>;
+concept CoroutineAllocator = requires(T t, void *p, std::size_t s) {
+    { t.allocate(s) } -> std::same_as<void *>;
 };
 
 } // namespace Cortado::Concepts
