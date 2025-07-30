@@ -38,6 +38,16 @@ using DefaultScheduler = Common::Win32CoroutineScheduler;
 #endif
 
 #if defined(_WIN32)
+
+// Cortado
+//
+#include <Cortado/Common/Win32Event.h>
+
+namespace Cortado
+{
+using DefaultEvent = Common::Win32Event;
+} // namespace Cortado
+
 #elif defined (_POSIX_VERSION)
 
 // Cortado

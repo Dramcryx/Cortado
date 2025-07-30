@@ -52,7 +52,7 @@ else()
 endif()
 
 if (WIN32)
-  add_executable(native_example "example/exampleWin32.cpp" "include/Cortado/Concepts/Atomic.h")
+  add_executable(native_example "example/exampleWin32.cpp" "include/Cortado/Concepts/Atomic.h" "include/Cortado/Common/Win32Event.h")
   target_include_directories(native_example PUBLIC ./include)
   target_compile_definitions(native_example PUBLIC _AMD64_ _UNICODE)
 endif()
