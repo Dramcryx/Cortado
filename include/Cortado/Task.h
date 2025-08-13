@@ -33,14 +33,15 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     }
 
     template <typename... Args>
-    static void *operator new(std::size_t size, Allocator a, Args...)
+    static void *operator new(std::size_t size, Allocator a, Args&...)
     {
         return a.allocate(size);
     }
 
     template <typename Class, typename... Args>
-    static void *operator new(std::size_t size, Class &, Allocator a, Args...)
-        requires(!std::convertible_to<std::remove_cvref_t<Class> &, Allocator &>)
+    static void *operator new(std::size_t size, Class &, Allocator a, Args&...)
+        requires(
+            !std::convertible_to<std::remove_cvref_t<Class> &, Allocator &>)
     {
         return operator new(size, a);
     }

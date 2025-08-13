@@ -48,7 +48,7 @@ namespace Cortado
 using DefaultEvent = Common::Win32Event;
 } // namespace Cortado
 
-#elif defined (_POSIX_VERSION)
+#elif defined(_POSIX_VERSION)
 
 // Cortado
 //

@@ -147,7 +147,16 @@ inline ResumeBackgroundAwaiter ResumeBackground()
 }
 
 template <Concepts::TaskImpl T, typename R, typename... Args>
-Task<void, T> WhenAll(Task<R, T> &first, Args &&...next)
+    requires std::is_default_constructible_v<typename T::Allocator>
+Task<void, T> WhenAll(Task<R, T> &first, Args &...next)
+{
+    using AllocatorT = typename T::Allocator;
+
+    return WhenAll(AllocatorT{}, first, next...);
+}
+
+template <Concepts::TaskImpl T, typename R, typename... Args>
+Task<void, T> WhenAll(typename T::Allocator alloc, Task<R, T> &first, Args &...next)
 {
     co_await first;
     (void(co_await next), ...);

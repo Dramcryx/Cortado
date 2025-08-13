@@ -18,7 +18,8 @@ namespace Cortado::Concepts
 // 4) Defines yielding function for synchronous wait.
 //
 template <typename T>
-concept TaskImpl = ErrorHandler<T> && HasAtomic<T> && HasEvent<T> && HasCoroutineAllocator<T>;
+concept TaskImpl =
+    ErrorHandler<T> && HasAtomic<T> && HasEvent<T> && HasCoroutineAllocator<T>;
 
 } // namespace Cortado::Concepts
 

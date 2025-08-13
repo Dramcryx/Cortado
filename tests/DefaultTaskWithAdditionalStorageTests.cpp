@@ -10,6 +10,14 @@
 #include <mutex>
 #include <unordered_map>
 
+namespace
+{
+inline const char *GetCurrentTestName()
+{
+    return ::testing::UnitTest::GetInstance()->current_test_info()->name();
+}
+} // namespace
+
 struct UserStorage
 {
     inline static std::mutex TestResultMutex;
@@ -30,8 +38,7 @@ struct UserStorage
     Cortado::Common::STLAtomic::Atomic BeforeResumeCallCount{0};
 
 private:
-    std::string m_testName =
-        ::testing::UnitTest::GetInstance()->current_test_info()->name();
+    std::string m_testName = GetCurrentTestName();
 };
 
 struct PreAndPostActions
@@ -68,8 +75,8 @@ TEST(DefaultTaskWithAdditionalStorageTests, BasicTest)
     task().Get();
 
     std::unique_lock lk{UserStorage::TestResultMutex};
-    auto [beforeSuspend, _] = UserStorage::TestResultStorage
-        [::testing::UnitTest::GetInstance()->current_test_info()->name()];
+    auto [beforeSuspend, _] =
+        UserStorage::TestResultStorage[GetCurrentTestName()];
     EXPECT_EQ(1, beforeSuspend) << "Expected only one call in final awaiter";
 }
 
@@ -85,8 +92,7 @@ TEST(DefaultTaskWithAdditionalStorageTests, ResumeBackgroundTest)
     unsigned long beforeSuspend = 0;
     unsigned long beforeResume = 0;
 
-    std::string testName =
-        ::testing::UnitTest::GetInstance()->current_test_info()->name();
+    std::string testName = GetCurrentTestName();
 
     for (;;)
     {
