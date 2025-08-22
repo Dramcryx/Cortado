@@ -15,37 +15,62 @@
 namespace Cortado::Detail
 {
 
-enum class CallbackRaceState : unsigned long
+/// @brief Typed atomic primitive to use for a race condition
+/// between callback and a value.
+///
+enum class CallbackRaceState : Concepts::AtomicPrimitive
 {
     None = 0,
     Value,
     Callback
 };
 
-struct None
-{
-};
-
+/// @brief Helper class to define user-defined storage for coroutine.
+/// @tparam T TaskImpl type.
+/// @tparam FHasAdditionaStorage boolean inidicating if TaskImpl defines
+/// custom user storage.
+///
 template <typename T, bool FHasAdditionalStorage>
 struct AdditionalStorageHelper
 {
     using AdditionalStorageT = typename T::AdditionalStorage;
 };
 
+/// @brief Helper class to define user-defined storage for coroutine.
+/// @tparam T TaskImpl type.
+//
 template <typename T>
 struct AdditionalStorageHelper<T, false>
 {
-    using AdditionalStorageT = None;
+    struct Nothing
+    {
+    };
+
+    using AdditionalStorageT = Nothing;
 };
 
+/// @brief Core promise class. Encapsulates refcounting,
+/// initial and final suspensions, exception handling and
+/// continuation hadnling.
+/// @tparam T A class that defines custom types needed for
+/// coroutine strategy to function.
+/// See more at @link Cortado::Concepts::TaskImpl TaskImpl@endlink
+/// @tparam R Return value type.
+///
 template <Concepts::TaskImpl T, typename R>
 struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 {
+    /// @brief Compiler contract: Initial suspension.
+    /// Never suspend at the beginning.
+    ///
     std::suspend_never initial_suspend()
     {
         return {};
     }
 
+    /// @brief Compiler contract: Final suspension.
+    /// Do not suspend but call continuation if exists.
+    ///
     decltype(auto) final_suspend() noexcept
     {
         struct FinalAwaiter
@@ -61,7 +86,7 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
                 _this.m_completionEvent.Set();
                 _this.CallbackValueRendezvous();
 
-                auto next = _this.Continuation();
+                auto next = _this.m_continuation;
                 if (next != nullptr)
                 {
                     next();
@@ -107,8 +132,9 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         m_continuation = h;
         CallbackRaceState expectedState = CallbackRaceState::None;
         if (m_callbackRace.compare_exchange_strong(
-                *reinterpret_cast<unsigned long *>(&expectedState),
-                static_cast<unsigned long>(CallbackRaceState::Callback)))
+                *reinterpret_cast<Concepts::AtomicPrimitive *>(&expectedState),
+                static_cast<Concepts::AtomicPrimitive>(
+                    CallbackRaceState::Callback)))
         {
             // Successfully stored callback first
 
@@ -121,11 +147,6 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         }
 
         return false;
-    }
-
-    std::coroutine_handle<> GetContinuation()
-    {
-        return m_storage.Continuation();
     }
 
     void BeforeSuspend()
@@ -148,8 +169,9 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
     {
         CallbackRaceState expectedState = CallbackRaceState::None;
         if (m_callbackRace.compare_exchange_strong(
-                *reinterpret_cast<unsigned long *>(&expectedState),
-                static_cast<unsigned long>(CallbackRaceState::Value)))
+                *reinterpret_cast<Concepts::AtomicPrimitive *>(&expectedState),
+                static_cast<Concepts::AtomicPrimitive>(
+                    CallbackRaceState::Value)))
         {
             // Successfully stored value first
             return;
@@ -174,7 +196,8 @@ protected:
     CoroutineStorage<R, ExceptionT, AtomicT> m_storage;
 
     // Race flag between possible continuation and coroutine
-    AtomicT m_callbackRace{static_cast<unsigned long>(CallbackRaceState::None)};
+    AtomicT m_callbackRace{
+        static_cast<Concepts::AtomicPrimitive>(CallbackRaceState::None)};
 
     // Completion flag
     EventT m_completionEvent;
@@ -191,11 +214,6 @@ protected:
         {
             T::Rethrow(std::move(m_storage.UnsafeError()));
         }
-    }
-
-    std::coroutine_handle<> &Continuation()
-    {
-        return m_continuation;
     }
 };
 

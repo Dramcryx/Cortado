@@ -1,0 +1,16 @@
+# Doxygen configuration template
+# CMake will replace @VAR@ with actual values
+
+PROJECT_NAME           = Cortado
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@/docs
+INPUT                  = @PROJECT_SOURCE_DIR@/include
+RECURSIVE              = YES
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+
+# Extract docs even if comments are missing
+EXTRACT_ALL            = YES

@@ -26,7 +26,7 @@ constexpr std::size_t SizeOfResultStorage()
     return SizeOfR > SizeOfE ? SizeOfR : SizeOfE;
 }
 
-enum class HeldValue : unsigned long
+enum class HeldValue : Concepts::AtomicPrimitive
 {
     None = 0,
     Value,
@@ -55,19 +55,19 @@ public:
     {
         ::new (&m_resultStorage[0]) R{std::forward<U>(u)};
 
-        m_heldValue = static_cast<unsigned long>(HeldValue::Value);
+        m_heldValue = static_cast<Concepts::AtomicPrimitive>(HeldValue::Value);
     }
 
     void SetError(E &&e)
     {
         ::new (&m_resultStorage[0]) E{std::forward<E>(e)};
 
-        m_heldValue = static_cast<unsigned long>(HeldValue::Error);
+        m_heldValue = static_cast<Concepts::AtomicPrimitive>(HeldValue::Error);
     }
 
     HeldValue GetHeldValueType() const
     {
-        unsigned long valueType = m_heldValue;
+        Concepts::AtomicPrimitive valueType = m_heldValue;
         return static_cast<HeldValue>(valueType);
     }
 
@@ -82,14 +82,14 @@ public:
     }
 
 private:
-    Atomic m_heldValue{static_cast<unsigned long>(HeldValue::None)};
+    Atomic m_heldValue{static_cast<Concepts::AtomicPrimitive>(HeldValue::None)};
 
     alignas(AlignOfResultStorage<R, E>()) std::byte
         m_resultStorage[SizeOfResultStorage<R, E>()] = {};
 
     void DestroyResult()
     {
-        unsigned long valueType = m_heldValue;
+        Concepts::AtomicPrimitive valueType = m_heldValue;
         switch (static_cast<HeldValue>(valueType))
         {
         case HeldValue::Value:

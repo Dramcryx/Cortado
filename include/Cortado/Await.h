@@ -156,7 +156,9 @@ Task<void, T> WhenAll(Task<R, T> &first, Args &...next)
 }
 
 template <Concepts::TaskImpl T, typename R, typename... Args>
-Task<void, T> WhenAll(typename T::Allocator alloc, Task<R, T> &first, Args &...next)
+Task<void, T> WhenAll(typename T::Allocator alloc,
+                      Task<R, T> &first,
+                      Args &...next)
 {
     co_await first;
     (void(co_await next), ...);

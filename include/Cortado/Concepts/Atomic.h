@@ -1,3 +1,7 @@
+/// @file Atomic.h
+/// Concept of atomic variable.
+///
+
 #ifndef CORTADO_CONCEPTS_ATOMIC_H
 #define CORTADO_CONCEPTS_ATOMIC_H
 
@@ -8,19 +12,31 @@
 namespace Cortado::Concepts
 {
 
-// Atomic requires:
-// 1) Construction from any integer which initializes respective value;
-// 2) Atomic pre-increment and pre-decrement.
-// 3) Atomic compare exchange.
-//
-template <typename T>
-concept Atomic = requires(T t, unsigned long &expected, unsigned long desired) {
-    { T{1} };
-    { t.operator++() } -> std::same_as<unsigned long>;
-    { t.operator--() } -> std::same_as<unsigned long>;
-    { t.compare_exchange_strong(expected, desired) } -> std::same_as<bool>;
-};
+/// @brief Atomic primitve used across TaskImpl.
+///
+using AtomicPrimitive = unsigned long;
 
+/// @brief Concept of atomic variable
+/// Atomic requires:
+/// 1) Construction from any integer which initializes respective value;
+/// 2) Atomic pre-increment and pre-decrement.
+/// 3) Atomic compare exchange.
+/// @tparam T Candidate type for atomicity.
+///
+template <typename T>
+concept Atomic =
+    requires(T t, AtomicPrimitive &expected, AtomicPrimitive desired) {
+        { T{1} };
+        { t.operator++() } -> std::same_as<AtomicPrimitive>;
+        { t.operator--() } -> std::same_as<AtomicPrimitive>;
+        { t.compare_exchange_strong(expected, desired) } -> std::same_as<bool>;
+    };
+
+/// @brief Helper concept to define if `T` defines
+/// `Atomic` type (via `using` or `typedef`), and that type
+/// suits `Atomic` concept constaints.
+/// @tparam T TaskImpl type.
+///
 template <typename T>
 concept HasAtomic = requires {
     // std::atomic_int or substitute

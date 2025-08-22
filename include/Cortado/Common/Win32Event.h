@@ -11,8 +11,7 @@ namespace Cortado::Common
 class Win32Event
 {
 public:
-    Win32Event() :
-        m_eventHandle{::CreateEvent(nullptr, true, false, nullptr)}
+    Win32Event() : m_eventHandle{::CreateEvent(nullptr, true, false, nullptr)}
     {
     }
 
@@ -21,7 +20,6 @@ public:
         ::CloseHandle(m_eventHandle);
     }
 
-    
     void Wait()
     {
         ::WaitForSingleObject(m_eventHandle, INFINITE);
@@ -29,7 +27,8 @@ public:
 
     bool WaitFor(unsigned long timeToWaitMs)
     {
-        return ::WaitForSingleObject(m_eventHandle, timeToWaitMs) == WAIT_OBJECT_0;
+        return ::WaitForSingleObject(m_eventHandle, timeToWaitMs) ==
+               WAIT_OBJECT_0;
     }
 
     void Set()
@@ -47,6 +46,5 @@ private:
 };
 
 } // namespace Cortado::Common
-
 
 #endif

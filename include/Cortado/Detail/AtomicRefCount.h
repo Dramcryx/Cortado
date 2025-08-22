@@ -12,12 +12,12 @@ template <Concepts::Atomic T>
 class AtomicRefCount
 {
 public:
-    unsigned long AddRef() noexcept
+    Concepts::AtomicPrimitive AddRef() noexcept
     {
         return ++m_refCount;
     }
 
-    unsigned long Release() noexcept
+    Concepts::AtomicPrimitive Release() noexcept
     {
         return --m_refCount;
     }
