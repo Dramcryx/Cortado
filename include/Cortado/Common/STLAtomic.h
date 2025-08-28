@@ -10,7 +10,7 @@ namespace Cortado::Common
 
 struct STLAtomic
 {
-    using Atomic = std::atomic<unsigned long>;
+    using Atomic = std::atomic_ulong;
 };
 
 } // namespace Cortado::Common

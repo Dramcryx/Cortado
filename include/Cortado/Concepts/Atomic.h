@@ -12,14 +12,14 @@
 namespace Cortado::Concepts
 {
 
-/// @brief Atomic primitve used across TaskImpl.
+/// @brief Atomic primitve used across @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
 ///
 using AtomicPrimitive = unsigned long;
 
 /// @brief Concept of atomic variable
-/// Atomic requires:
-/// 1) Construction from any integer which initializes respective value;
-/// 2) Atomic pre-increment and pre-decrement.
+/// Atomic requires: <br>
+/// 1) Construction from any integer which initializes respective value; <br>
+/// 2) Atomic pre-increment and pre-decrement. <br>
 /// 3) Atomic compare exchange.
 /// @tparam T Candidate type for atomicity.
 ///
@@ -32,14 +32,14 @@ concept Atomic =
         { t.compare_exchange_strong(expected, desired) } -> std::same_as<bool>;
     };
 
-/// @brief Helper concept to define if `T` defines
-/// `Atomic` type (via `using` or `typedef`), and that type
-/// suits `Atomic` concept constaints.
-/// @tparam T TaskImpl type.
+/// @brief Helper concept to define if T defines
+/// Atomic type (via `using` or `typedef`), and that type
+/// suits @link Cortado::Concepts::Atomic Atomic@endlink concept constaints.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink type.
 ///
 template <typename T>
 concept HasAtomic = requires {
-    // std::atomic_int or substitute
+    // std::atomic_ulong or substitute
     //
     typename T::Atomic;
 

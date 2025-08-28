@@ -5,6 +5,7 @@
 //
 #include <Cortado/Concepts/BackgroundResumable.h>
 #include <Cortado/Task.h>
+#include <coroutine>
 
 namespace Cortado
 {
