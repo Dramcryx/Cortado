@@ -1,3 +1,7 @@
+/// @brief DefaultTaskImpl.h
+/// A default task implementation for Win32 and Mac.
+///
+
 #ifndef CORTADO_DEFAULT_TASK_IMPL_H
 #define CORTADO_DEFAULT_TASK_IMPL_H
 
@@ -64,6 +68,9 @@ using DefaultEvent = Common::PosixEvent;
 namespace Cortado
 {
 
+/// @brief Default implementation with platform-default scheduler,
+/// STL allocator, atomic and exception.
+///
 struct DefaultTaskImpl :
     Cortado::Common::STLAtomic,
     Cortado::Common::STLCoroutineAllocator,

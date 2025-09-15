@@ -12,7 +12,8 @@
 namespace Cortado::Concepts
 {
 
-/// @brief CoroutineScheduler is something that allows for scheduling coroutines.
+/// @brief CoroutineScheduler is something that allows for scheduling
+/// coroutines.
 /// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink type.
 ///
 template <typename T>

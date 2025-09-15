@@ -12,7 +12,8 @@
 namespace Cortado::Concepts
 {
 
-/// @brief Atomic primitve used across @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+/// @brief Atomic primitve used across @link Cortado::Concepts::TaskImpl
+/// TaskImpl@endlink.
 ///
 using AtomicPrimitive = unsigned long;
 

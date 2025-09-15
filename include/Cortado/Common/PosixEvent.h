@@ -1,5 +1,11 @@
+/// @file PosixEvent.h
+/// Implementation of an event using POSIX condition variable.
+///
+
 #ifndef CORTADO_COMMON_POSIX_EVENT_H
 #define CORTADO_COMMON_POSIX_EVENT_H
+
+#ifdef _POSIX_VERSION
 
 // POSIX
 //
@@ -8,28 +14,45 @@
 namespace Cortado::Common
 {
 
+/// @brief Event implementation for POSIX-like platform.
+///
 class PosixEvent
 {
 public:
-    PosixEvent(bool initiallySignaled = false) : m_signaled{initiallySignaled}
+    /// @brief Constructor. Initializes a non-singaled event.
+    ///
+    PosixEvent() :
+        m_signaled{false}, m_mutex PTHREAD_MUTEX_INITIALIZER,
+        m_cv PTHREAD_COND_INITIALIZER
     {
-        m_mutex = PTHREAD_MUTEX_INITIALIZER;
-        m_cv = PTHREAD_COND_INITIALIZER;
-        m_signaled = false;
     }
 
+    /// @brief Non-copyable.
+    ///
     PosixEvent(const PosixEvent &) = delete;
+
+    /// @brief Non-copyable.
+    ///
     PosixEvent &operator=(const PosixEvent &) = delete;
 
+    /// @brief Non-movable.
+    ///
     PosixEvent(PosixEvent &&) = delete;
+
+    /// @brief Non-movable.
+    ///
     PosixEvent &operator=(PosixEvent &&) = delete;
 
+    /// @brief Destructor.
+    ///
     ~PosixEvent()
     {
         pthread_cond_destroy(&m_cv);
         pthread_mutex_destroy(&m_mutex);
     }
 
+    /// @brief Concept contract: Wait for event to be set.
+    ///
     void Wait()
     {
         PthreadAutoLock autoLock{&m_mutex};
@@ -40,6 +63,10 @@ public:
         }
     }
 
+    /// @brief Concept contract: Wait for event to be set in a period of time.
+    /// @param timeToWaitMs How many milliseconds to wait.
+    /// @returns true if event was set in timeToWaitMs, false otherwise.
+    ///
     bool WaitFor(unsigned long timeToWaitMs)
     {
         int result = 0;
@@ -64,6 +91,8 @@ public:
         return m_signaled;
     }
 
+    /// @brief Concept contact: Singal the event.
+    ///
     void Set()
     {
         PthreadAutoLock autoLock{&m_mutex};
@@ -72,6 +101,9 @@ public:
         pthread_cond_broadcast(&m_cv);
     }
 
+    /// @brief Concept contract: Test if event is set already.
+    /// @return true if event is set, false otherwise.
+    ///
     bool IsSet()
     {
         PthreadAutoLock autoLock{&m_mutex};
@@ -100,5 +132,7 @@ private:
 };
 
 } // namespace Cortado::Common
+
+#endif // _POSIX_VERSION
 
 #endif

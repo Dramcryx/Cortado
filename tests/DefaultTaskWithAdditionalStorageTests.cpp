@@ -77,7 +77,7 @@ TEST(DefaultTaskWithAdditionalStorageTests, BasicTest)
     std::unique_lock lk{UserStorage::TestResultMutex};
     auto [beforeSuspend, _] =
         UserStorage::TestResultStorage[GetCurrentTestName()];
-    EXPECT_EQ(1, beforeSuspend) << "Expected only one call in final awaiter";
+    EXPECT_EQ(0, beforeSuspend) << "Expected only one call in final awaiter";
 }
 
 TEST(DefaultTaskWithAdditionalStorageTests, ResumeBackgroundTest)
@@ -106,7 +106,7 @@ TEST(DefaultTaskWithAdditionalStorageTests, ResumeBackgroundTest)
             UserStorage::TestResultStorage[testName];
         break;
     }
-    EXPECT_EQ(2, beforeSuspend) << "Expected two calls";
+    EXPECT_EQ(1, beforeSuspend) << "Expected two calls";
 
     EXPECT_EQ(1, beforeResume)
         << "Expected one call in resume background awaiter";

@@ -1,5 +1,9 @@
-#ifndef CORTADO_COMMON_COROUTINE_SCHEDULERS_WIN32_COROUTINE_SCHEDULER_H
-#define CORTADO_COMMON_COROUTINE_SCHEDULERS_WIN32_COROUTINE_SCHEDULER_H
+/// @file Win32CoroutineScheduler.h
+/// Implementation of a default async runtime using Win32 Threadpool API.
+///
+
+#ifndef CORTADO_COMMON_WIN32_COROUTINE_SCHEDULER_H
+#define CORTADO_COMMON_WIN32_COROUTINE_SCHEDULER_H
 
 #ifdef _WIN32
 
@@ -14,8 +18,13 @@
 namespace Cortado::Common
 {
 
+/// @brief Simple coroutine scheduler on a Win32 Threadpool.
+///
 struct Win32CoroutineScheduler
 {
+    /// @brief Concept contract: Schedules coroutine in a different thread.
+    /// @param h Coroutine to schedule.
+    ///
     void Schedule(std::coroutine_handle<> h)
     {
         // Create a thread pool work object
@@ -30,6 +39,8 @@ struct Win32CoroutineScheduler
         CloseThreadpoolWork(work);
     }
 
+    /// @brief Concept contract: Get app-global scheduler instance.
+    ///
     static Win32CoroutineScheduler &GetDefaultBackgroundScheduler()
     {
         static Win32CoroutineScheduler sched;
@@ -37,6 +48,9 @@ struct Win32CoroutineScheduler
     }
 
 private:
+    /// @brief Win32 contract: Function that restores coroutine handle and
+    /// resumes it.
+    ///
     static void CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE,
                                       PVOID Context,
                                       PTP_WORK)
@@ -48,6 +62,6 @@ private:
 
 } // namespace Cortado::Common
 
-#endif
+#endif // _WIN32
 
 #endif

@@ -13,7 +13,7 @@ namespace Cortado::Concepts
 {
 
 /// @brief ErrorHandler should define the exception type,
-/// core logic for unhandled_exception, logic catch an exception
+/// core logic for unhandled_exception - how to catch an exception
 /// and how to rethrow it.
 /// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink type.
 ///

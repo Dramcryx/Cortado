@@ -1,3 +1,7 @@
+/// @file Task.h
+/// Task implementation.
+///
+
 #ifndef CORTADO_TASK_H
 #define CORTADO_TASK_H
 
@@ -16,28 +20,43 @@ namespace Cortado
 template <typename R, Concepts::TaskImpl T>
 class Task;
 
+/// @brief Final promise type.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+/// @tparam R Return type of coroutine.
+///
 template <Concepts::TaskImpl T, typename R>
 struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
 {
     using Allocator = typename T::Allocator;
 
+    /// @brief Default constructor. Requires allocator to be
+    /// default-constructible.
+    ///
     PromiseType()
+        requires std::is_default_constructible_v<Allocator>
     {
-        static_assert(std::is_default_constructible_v<Allocator>);
     }
 
+    /// @brief Constructor from coroutine body args.
+    /// @tparam TArgs Coroutine body args.
+    ///
     template <typename... TArgs>
     PromiseType(TArgs &&...args) :
         PromiseType{AllocatorSearchTag{}, std::forward<TArgs>(args)...}
     {
     }
 
+    /// @brief Compiler contract: Defining `new` that uses custom allocator.
+    ///
     template <typename... Args>
     static void *operator new(std::size_t size, Allocator a, Args &...)
     {
         return a.allocate(size);
     }
 
+    /// @brief Compiler contract: Defining `new` that uses custom allocator for
+    /// methods.
+    ///
     template <typename Class, typename... Args>
     static void *operator new(std::size_t size, Class &, Allocator a, Args &...)
         requires(
@@ -46,32 +65,50 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
         return operator new(size, a);
     }
 
+    /// @brief Compiler contract: Defining `new` that uses custom allocator
+    /// which can be default-constructed.
+    ///
     static void *operator new(std::size_t size)
+        requires std::is_default_constructible_v<Allocator>
     {
         return operator new(size, Allocator{});
     }
 
+    /// @brief Compiler contract: First suspension point return value.
+    /// @returns Task object.
+    ///
     Task<R, T> get_return_object();
 
 private:
     Allocator m_alloc;
 
+    /// @brief A marker type to search allocator within coroutine body args.
+    ///
     struct AllocatorSearchTag
     {
     };
 
+    /// @brief Constructor which deducts allocator from coroutine body args.
+    ///
     template <typename... TArgs>
     PromiseType(AllocatorSearchTag, Allocator al, TArgs &&...args) : m_alloc{al}
     {
     }
 
+    /// @brief Constructor for coroutine without allocator within coroutine body
+    /// args.
+    ///
     template <typename... TArgs>
+        requires std::is_default_constructible_v<Allocator>
     PromiseType(AllocatorSearchTag, TArgs &&...args)
     {
-        static_assert(std::is_default_constructible_v<Allocator>);
     }
 };
 
+/// @brief Task implementation type.
+/// @tparam R Return type of coroutine.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+///
 template <typename R = void, Concepts::TaskImpl T = DefaultTaskImpl>
 class Task
 {
@@ -81,16 +118,23 @@ public:
 
     using promise_type = PromiseType<T, R>;
 
+    /// @brief Constructor.
+    /// @param h Coroutine handle.
+    ///
     Task(std::coroutine_handle<PromiseType<T, R>> h) : m_handle{h}
     {
     }
 
+    /// @brief Move constructor.
+    ///
     Task(Task &&other) noexcept
     {
         Reset();
         m_handle = std::exchange(other.m_handle, nullptr);
     }
 
+    /// @brief Move assignment.
+    ///
     Task &operator=(Task &&other) noexcept
     {
         Reset();
@@ -99,29 +143,50 @@ public:
         return *this;
     }
 
+    /// @brief Non-copyable.
+    ///
     Task(const Task &) = delete;
+
+    /// @brief Non-copyable.
+    ///
     Task &operator=(const Task &) = delete;
 
+    /// @brief Destructor. Decrements reference count on the promise
+    /// and destroys it if needed.
+    ///
     ~Task()
     {
         Reset();
     }
 
+    /// @brief Test if task is completed.
+    /// @returns true is task is completed, false otherwise.
+    ///
     inline bool IsReady() const
     {
         return m_handle.promise().Ready();
     }
 
+    /// @brief Wait task completion for indefinite amout of time.
+    ///
     inline void Wait()
     {
         m_handle.promise().Wait();
     }
 
+    /// @brief Wait for task completion in a period of time.
+    /// @param timeToWaitMs How many milliseconds to wait.
+    /// @returns true if event was set in timeToWaitMs, false otherwise.
+    ///
     inline bool WaitFor(unsigned long timeToWaitMs)
     {
         return m_handle.promise().WaitFor(timeToWaitMs);
     }
 
+    /// @brief Get task result.
+    /// @returns Task result.
+    /// @throws Exception if present.
+    ///
     decltype(auto) Get()
     {
         m_handle.promise().Wait();
@@ -132,6 +197,9 @@ public:
 private:
     std::coroutine_handle<PromiseType<T, R>> m_handle;
 
+    /// @brief Lifetime helper. If promise reference count reaches zero,
+    /// the promise is destroyed.
+    ///
     void Reset()
     {
         if (m_handle && m_handle.promise().Release() == 0)
@@ -141,6 +209,9 @@ private:
     }
 };
 
+/// @brief Compiler contract: First suspension point return value.
+/// @returns Task object.
+///
 template <Concepts::TaskImpl T, typename R>
 Task<R, T> PromiseType<T, R>::get_return_object()
 {

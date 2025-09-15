@@ -1,4 +1,4 @@
-/// @file PreAndPostActions.h
+/// @file PreAndPostAction.h
 /// Definition of the PreAndPostAction concept.
 ///
 
@@ -14,7 +14,8 @@ namespace Cortado::Concepts
 {
 
 /// @brief Helper concept to define if T defines
-/// a type for additional storage. It is currently required to be default-constructible.
+/// a type for additional storage. It is currently required to be
+/// default-constructible.
 /// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink type.
 ///
 template <typename T>
@@ -23,7 +24,8 @@ concept HasAdditionalStorage = requires {
     std::is_default_constructible_v<typename T::AdditionalStorage>;
 };
 
-/// @brief Concept that allows user to extend or modify behavior of suspend and resume.
+/// @brief Concept that allows user to extend or modify behavior of suspend and
+/// resume.
 /// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink type.
 ///
 template <typename T>

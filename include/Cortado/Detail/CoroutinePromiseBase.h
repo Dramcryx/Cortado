@@ -1,3 +1,7 @@
+/// @file CoroutinePromiseBase.h
+/// Core data structure for coroutine promise.
+///
+
 #ifndef CORTADO_COROUTINE_PROMISE_BASE_H
 #define CORTADO_COROUTINE_PROMISE_BASE_H
 
@@ -42,6 +46,8 @@ struct AdditionalStorageHelper
 template <typename T>
 struct AdditionalStorageHelper<T, false>
 {
+    /// @brief Human-readable no user storage indicator.
+    ///
     struct Nothing
     {
     };
@@ -82,7 +88,9 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 
             bool await_suspend(std::coroutine_handle<>) noexcept
             {
-                _this.BeforeSuspend();
+                // No _this.BeforeSuspend(); even if we suspend because
+                // this frame is outside of coroutine function body.
+                //
                 _this.m_completionEvent.Set();
                 _this.CallbackValueRendezvous();
 
@@ -97,7 +105,7 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
 
             void await_resume() noexcept
             {
-                // no _this.BeforeResume as the frame is expected to be
+                // no _this.BeforeResume(); as the frame is expected to be
                 // destroyed
             }
 
@@ -107,26 +115,43 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         return FinalAwaiter{*this};
     }
 
+    /// @brief Compiler contract: Actions on unhandled exception.
+    /// Call user-defined cathcer.
+    ///
     void unhandled_exception()
     {
         m_storage.SetError(T::Catch());
     }
 
+    /// @brief Coroutine readiness flag.
+    /// @returns true if coroutine has value/exception, false otherwise.
+    ///
     bool Ready()
     {
         return m_completionEvent.IsSet();
     }
 
+    /// @brief Wait completion event to be signaled.
+    ///
     void Wait()
     {
         m_completionEvent.Wait();
     }
 
+    /// @brief Wait for completion event for specified amount of time.
+    /// @param timeToWaitMs Time to wait in milliseconds.
+    ///
     bool WaitFor(unsigned long timeToWaitMs)
     {
         return m_completionEvent.WaitFor(timeToWaitMs);
     }
 
+    /// @brief Set next coroutine to execute once this one is completed.
+    /// @param h Handle to a coroutine which must be resumed once this
+    /// coroutine is completed.
+    /// @returns true if suspension of the current coroutine required, false
+    /// otherwise.
+    ///
     bool SetContinuation(std::coroutine_handle<> h)
     {
         m_continuation = h;
@@ -137,7 +162,6 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
                     CallbackRaceState::Callback)))
         {
             // Successfully stored callback first
-
             return true;
         }
         else if (expectedState == CallbackRaceState::Value)
@@ -149,6 +173,10 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         return false;
     }
 
+    /// @brief Call user-defined behavior over user-defined storage
+    /// to perform specific actions before coroutine is suspended in the middle
+    /// of execution.
+    ///
     void BeforeSuspend()
     {
         if constexpr (Concepts::HasAdditionalStorage<T>)
@@ -157,6 +185,10 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         }
     }
 
+    /// @brief Call user-defined behavior over user-defined storage
+    /// to perform specific actions before coroutine is resumed in the middle
+    /// of execution.
+    ///
     void BeforeResume()
     {
         if constexpr (Concepts::HasAdditionalStorage<T>)
@@ -165,6 +197,11 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         }
     }
 
+    /// @brief Handle race-condition between a thread that sets value and a
+    /// thread that sets continuation. If value thread succeeds, we just return.
+    /// Otherwise we call continuation (i.e. continuation was set after
+    /// coroutine completion).
+    ///
     void CallbackValueRendezvous()
     {
         CallbackRaceState expectedState = CallbackRaceState::None;
@@ -188,26 +225,36 @@ protected:
     using ExceptionT = typename T::Exception;
     using AtomicT = typename T::Atomic;
     using EventT = typename T::Event;
-    using AdditionalStorageT =
-        AdditionalStorageHelper<T, Concepts::HasAdditionalStorage<T>>::
-            AdditionalStorageT;
 
-    // Essential storage - stores value or exception
+    static constexpr bool HasUserStroage = Concepts::HasAdditionalStorage<T>;
+    using AdditionalStorageT =
+        AdditionalStorageHelper<T, HasUserStroage>::AdditionalStorageT;
+
+    /// @brief Essential storage - stores value or exception.
+    ///
     CoroutineStorage<R, ExceptionT, AtomicT> m_storage;
 
-    // Race flag between possible continuation and coroutine
+    /// @brief Race flag between possible continuation and coroutine.
+    /// See @link Cortado::Detail::CoroutinePromiseBase::CallbackValueRendezvous
+    /// CallbackValueRendezvous@endlink for usage.
+    ///
     AtomicT m_callbackRace{
         static_cast<Concepts::AtomicPrimitive>(CallbackRaceState::None)};
 
-    // Completion flag
+    /// @brief Completion event.
+    ///
     EventT m_completionEvent;
 
-    // Continuation - the coroutine that awaits for this one, if any
+    /// @brief Continuation - the coroutine that awaits for this one, if any.
+    ///
     std::coroutine_handle<> m_continuation = nullptr;
 
-    // Optional user storage
+    /// @brief Optional user storage.
+    ///
     [[no_unique_address]] AdditionalStorageT m_additionalStorage;
 
+    /// @brief Rethrows exception from result storage, if any.
+    ///
     void RethrowError()
     {
         if (m_storage.GetHeldValueType() == HeldValue::Error)
@@ -217,15 +264,30 @@ protected:
     }
 };
 
+/// @brief Core promise class with compiler contract required to write
+/// `co_return value;`.
+/// @tparam T A class that defines custom types needed for
+/// coroutine strategy to function.
+/// See more at @link Cortado::Concepts::TaskImpl TaskImpl@endlink
+/// @tparam R Return value type.
+///
 template <Concepts::TaskImpl T, typename R>
 struct CoroutinePromiseBaseWithValue : CoroutinePromiseBase<T, R>
 {
+    /// @brief Compiler contract: Returning a value from coroutine.
+    /// @tparam U Type of return value that is equal to R or convertible to it.
+    ///
     template <typename U>
     void return_value(U &&u)
     {
         this->m_storage.SetValue(std::forward<U>(u));
     }
 
+    /// @brief Get stored value or rethrow exception.
+    /// @returns Value from storage.
+    /// @throws Exception from @link Cortado::Concepts::ErrorHandler
+    /// ErrorHandler@endlink's `Rethrow` function.
+    ///
     decltype(auto) Get()
     {
         this->RethrowError();
@@ -233,14 +295,27 @@ struct CoroutinePromiseBaseWithValue : CoroutinePromiseBase<T, R>
     }
 };
 
+/// @brief Core promise class with compiler contract required to write
+/// `co_return;`.
+/// @tparam T A class that defines custom types needed for
+/// coroutine strategy to function.
+/// See more at @link Cortado::Concepts::TaskImpl TaskImpl@endlink
+/// @tparam R Return value type.
+///
 template <Concepts::TaskImpl T>
 struct CoroutinePromiseBaseWithValue<T, void> : CoroutinePromiseBase<T, bool>
 {
+    /// @brief Compiler contract: Returning void from coroutine.
+    ///
     void return_void()
     {
         this->m_storage.SetValue(true);
     }
 
+    /// @brief Rethrow exception if any, do nothing oherwise.
+    /// @throws Exception from @link Cortado::Concepts::ErrorHandler
+    /// ErrorHandler@endlink's `Rethrow` function.
+    ///
     void Get()
     {
         this->RethrowError();

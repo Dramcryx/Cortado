@@ -17,9 +17,9 @@ namespace Cortado::Concepts
 /// @brief TaskImpl is the core concept of Cortado.
 /// A task implementation is something that:<br>
 /// 1) Defines how to handle exceptions;<br>
-/// 2) Defines an atomic integer (std::atomic_int or substitute);<br>
-/// 3) Defines a free atomic cmpxchg operation;<br>
-/// 4) Defines yielding function for synchronous wait.
+/// 2) Defines an atomic integer (std::atomic_ulong or substitute);<br>
+/// 3) Defines waitable event;<br>
+/// 4) Defines allocator to be used for allocations.
 /// @tparam T Candidate for TaskImpl.
 ///
 template <typename T>

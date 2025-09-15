@@ -1,3 +1,8 @@
+/// @file MacOSCoroutineScheduler.h
+/// Implementation of a default async runtime using Grand Central Dispatch
+/// (GCD).
+///
+
 #ifndef CORTADO_COMMON_MACOS_COROUTINE_SCHEDULER_H
 #define CORTADO_COMMON_MACOS_COROUTINE_SCHEDULER_H
 
@@ -14,8 +19,13 @@
 namespace Cortado::Common
 {
 
+/// @brief Simple coroutine scheduler on a GCD-provided dispatcher.
+///
 struct MacOSCoroutineScheduler
 {
+    /// @brief Concept contract: Schedules coroutine in a different thread.
+    /// @param h Coroutine to schedule.
+    ///
     void Schedule(std::coroutine_handle<> h)
     {
         dispatch_async_f(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0),
@@ -23,6 +33,8 @@ struct MacOSCoroutineScheduler
                          WorkCallback);
     }
 
+    /// @brief Concept contract: Get app-global scheduler instance.
+    ///
     static MacOSCoroutineScheduler &GetDefaultBackgroundScheduler()
     {
         static MacOSCoroutineScheduler sched;
@@ -30,6 +42,9 @@ struct MacOSCoroutineScheduler
     }
 
 private:
+    /// @brief GCD contract: Function that restores coroutine handle and
+    /// resumes it.
+    ///
     static void WorkCallback(void *context)
     {
         auto h = std::coroutine_handle<>::from_address(context);
@@ -39,6 +54,6 @@ private:
 
 } // namespace Cortado::Common
 
-#endif
+#endif // __APPLE__
 
 #endif
