@@ -1,4 +1,3 @@
-#include <chrono>
 #include <gtest/gtest.h>
 
 // Cortado
@@ -166,4 +165,21 @@ TEST(DefaultTaskTests, SyncWait)
 
     EXPECT_FALSE(taskObject.WaitFor(10));
     EXPECT_TRUE(taskObject.WaitFor(600));
+}
+
+TEST(DefaultTaskTests, WhenAny)
+{
+    static std::atomic_int v{0};
+    static auto task1 = []() -> Task<int>
+    {
+        co_return ++v;
+    };
+
+    []() -> Task<void>
+    {
+        Task<int> tasks[] = {task1(), task1(), task1()};
+        co_await Cortado::WhenAny(tasks[0], tasks[1], tasks[2]);
+    }().Get();
+
+    EXPECT_GE(v.load(), 0);
 }

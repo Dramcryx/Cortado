@@ -27,7 +27,9 @@ using AtomicPrimitive = unsigned long;
 template <typename T>
 concept Atomic =
     requires(T t, AtomicPrimitive &expected, AtomicPrimitive desired) {
-        { T{1} };
+        { T{AtomicPrimitive{}} };
+        { t.load() } -> std::same_as<AtomicPrimitive>;
+        { t.store(AtomicPrimitive{}) } -> std::same_as<void>;
         { t.operator++() } -> std::same_as<AtomicPrimitive>;
         { t.operator--() } -> std::same_as<AtomicPrimitive>;
         { t.compare_exchange_strong(expected, desired) } -> std::same_as<bool>;

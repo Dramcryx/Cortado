@@ -26,8 +26,18 @@ Task<> Ans2()
     co_return;
 }
 
+Task<> Ans3()
+{
+    std::cout << __FUNCTION__ << " Started on thread " << pthread_self() << "\n";
+    co_await Ans2();
+    Task<int> tasks[]{ Ans(), Ans(), Ans() };
+    co_await Cortado::WhenAny(tasks[0], tasks[1], tasks[2]);
+    std::cout << __FUNCTION__ << " Resumed on thread " << pthread_self() << "\n";
+    co_return;
+}
+
 int main()
 {
-    Ans2().Get();
+    Ans3().Get();
     return 0;
 }

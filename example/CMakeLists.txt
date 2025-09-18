@@ -1,0 +1,10 @@
+if (WIN32)
+  add_executable(native_example "example/exampleWin32.cpp")
+  target_include_directories(native_example PUBLIC ./include)
+  target_compile_definitions(native_example PUBLIC _AMD64_ _UNICODE)
+endif()
+
+if (APPLE)
+  add_executable(native_example "example/exampleMac.cpp")
+  target_include_directories(native_example PUBLIC ./include)
+endif()

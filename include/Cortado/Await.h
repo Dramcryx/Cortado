@@ -8,6 +8,7 @@
 // Cortado
 //
 #include <Cortado/Concepts/BackgroundResumable.h>
+#include <Cortado/Detail/UniquePtrOverArc.h>
 #include <Cortado/Task.h>
 
 namespace Cortado
@@ -222,6 +223,14 @@ inline ResumeBackgroundAwaiter ResumeBackground()
     return {};
 }
 
+/// @brief Await for all tasks to complete.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+/// @tparam R Return value type of coroutine that awaits.
+/// @tparam Args Other tasks.
+/// @param first First task to await.
+/// @param next Other tasks to await.
+/// @return Task<void, T>.
+/// 
 template <Concepts::TaskImpl T, typename R, typename... Args>
     requires std::is_default_constructible_v<typename T::Allocator>
 Task<void, T> WhenAll(Task<R, T> &first, Args &...next)
@@ -231,6 +240,15 @@ Task<void, T> WhenAll(Task<R, T> &first, Args &...next)
     return WhenAll(AllocatorT{}, first, next...);
 }
 
+/// @brief Await for all tasks to complete.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+/// @tparam R Return value type of coroutine that awaits.
+/// @tparam Args Other tasks.
+/// @param alloc Coroutine allocator.
+/// @param first First task to await.
+/// @param next Other tasks to await.
+/// @return Task<void, T>.
+/// 
 template <Concepts::TaskImpl T, typename R, typename... Args>
 Task<void, T> WhenAll(typename T::Allocator alloc,
                       Task<R, T> &first,
@@ -291,6 +309,119 @@ auto operator co_await(T &sched)
 {
     return CoroutineSchedulerAwaiter{sched};
 };
+
+/// @brief Kind of a latch for multiple coroutine competing for coroutine resumption.<br>
+/// When child task finished, it tries to steal address from AtomicPrimitive. If it succeeds, it invokes
+/// resumption.
+/// When caller of WhenAny prepares for suspension, it tries to set address. If it does not succeed,
+/// caller gets immediately resumed (i.e. some child has already finished while we were preparing for
+/// suspension).
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+///
+template <Concepts::TaskImpl T>
+struct WhenAnySyncPoint 
+{
+    /// @brief Awaiter's entry point, tried to set resumption address for child coroutines.
+    /// @param h Coroutine handle address.
+    /// @returns true if succeeded, false if some child already finished.
+    ///
+    bool StoreAddress(void* h)
+    {
+        Concepts::AtomicPrimitive address = reinterpret_cast<Concepts::AtomicPrimitive>(h);
+        return m_atomicAddress.compare_exchange_strong(address, 0);
+    }
+
+    /// @brief Child tasks' entry point. They try to steal address and replace it with "called" flag.
+    ///
+    void Invoke()
+    {
+        Concepts::AtomicPrimitive address = 0;
+        if (!m_atomicAddress.compare_exchange_strong(address, WasInvokedValue) && address != WasInvokedValue)
+        {
+            std::coroutine_handle<>::from_address(reinterpret_cast<void*>(address))();
+        }
+    }
+
+private:
+    static constexpr auto WasInvokedValue = static_cast<Concepts::AtomicPrimitive>(1);
+    typename T::Atomic m_atomicAddress{0};
+};
+
+/// @brief Awaiter for any of given tasks to complete.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+///
+template <Concepts::TaskImpl T>
+struct WhenAnyAwaiter : AwaiterBase
+{
+    Detail::UniquePtrOverArc<WhenAnySyncPoint<T>, typename T::Atomic> SyncPoint;
+
+    /// @brief Compiler contract: Always return false as resumption decision is expected to be made
+    /// in await_suspend.
+    /// 
+    bool await_ready()
+    {
+        return false;
+    }
+
+    /// @brief Compiler contract: Try setting a resumption address in delegate.
+    /// @tparam U Return type of child task.
+    /// @returns true if address is successfully set, false otherwise.
+    ///
+    template <typename U>
+    bool await_suspend(std::coroutine_handle<PromiseType<T, U>> h)
+    {
+        AwaiterBase::await_suspend(h);
+        return SyncPoint->StoreAddress(h.address());
+    }
+
+    /// @brief Compiler contract: Resume action - do nothing, just restore
+    /// AwaiterBase state.
+    ///
+    using AwaiterBase::await_resume;
+};
+
+/// @brief Await for any task to complete.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+/// @tparam R Return value type of coroutine that awaits.
+/// @tparam Args Other tasks.
+/// @param alloc Coroutine allocator.
+/// @param first First task to await.
+/// @param next Other tasks to await.
+/// @return WhenAnyAwaiter<T>.
+///
+template <Concepts::TaskImpl T, typename R, typename... Args>
+decltype(auto) WhenAny(typename T::Allocator alloc, Task<R, T> &first, Args &...next)
+{
+    Detail::UniquePtrOverArc<WhenAnySyncPoint<T>, typename T::Atomic> syncPoint{alloc};
+
+    auto onCompleted = [](Task<R, T>& t, auto sp) -> Task<void, T>
+    {
+        co_await t;
+        sp->Invoke();
+    };
+
+    onCompleted(first, syncPoint);
+    (onCompleted(next, syncPoint), ...);
+
+    return WhenAnyAwaiter<T>{ .SyncPoint = std::move(syncPoint) };
+}
+
+/// @brief Await for any task to complete.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink.
+/// @tparam R Return value type of coroutine that awaits.
+/// @tparam Args Other tasks.
+/// @param first First task to await.
+/// @param next Other tasks to await.
+/// @return WhenAnyAwaiter<T>.
+///
+template <Concepts::TaskImpl T, typename R, typename... Args>
+    requires std::is_default_constructible_v<typename T::Allocator>
+decltype(auto) WhenAny(Task<R, T> &first, Args &...next)
+{
+    using AllocatorT = typename T::Allocator;
+
+    return WhenAny(AllocatorT{}, first, next...);
+}
 
 } // namespace Cortado
 
