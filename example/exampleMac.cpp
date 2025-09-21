@@ -1,7 +1,7 @@
 // Cortado
 //
-#include <Cortado/Await.h>
-#include <Cortado/Task.h>
+#include <Cortado/AsyncMutex.h>
+#include <Cortado/Common/MacOSMutex.h>
 
 // STL
 //
@@ -36,8 +36,52 @@ Task<> Ans3()
     co_return;
 }
 
+Task<int> Ans4()
+{
+    std::cout << __FUNCTION__ << " Started on thread " << pthread_self() << "\n";
+    co_await Ans3();
+
+    AsyncMutex<std::atomic_ulong, Common::MacOSMutex> mutex;
+
+    int count = 0;
+    auto task = [&] () -> Task<void>
+    {
+        co_await Cortado::ResumeBackground();
+
+        sleep(rand() % 1);
+        co_await mutex.ScopedLockAsync();
+        ++count;
+    };
+
+    Task<void> tasks[]{ task(), task() };
+    co_await Cortado::WhenAll(tasks[0], tasks[1]);
+    co_return count;
+}
+
+Task<int> Ans5()
+{
+    std::cout << __FUNCTION__ << " Started on thread " << pthread_self() << "\n";
+    int count = co_await Ans4();
+
+    AsyncMutex<std::atomic_ulong, Common::MacOSMutex> mutex;
+
+    auto task = [&] () -> Task<void>
+    {
+        co_await Cortado::ResumeBackground();
+
+        sleep(rand() % 1);
+        co_await mutex.LockAsync();
+        ++count;
+        mutex.Unlock();
+    };
+
+    Task<void> tasks[]{ task(), task() };
+    co_await Cortado::WhenAll(tasks[0], tasks[1]);
+    co_return count;
+}
+
 int main()
 {
-    Ans3().Get();
+    std::cout << std::boolalpha << (Ans5().Get() == 4) << "\n";
     return 0;
 }

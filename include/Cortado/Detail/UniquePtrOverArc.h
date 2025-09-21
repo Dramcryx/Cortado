@@ -29,7 +29,7 @@ struct RefCountedObject : AtomicRefCount<AtomicT>
     ///
     struct Deleter
     {
-        void operator()(RefCountedObject* self)
+        void operator()(RefCountedObject *self)
         {
             if (self->Release() == 0)
             {
@@ -48,29 +48,32 @@ struct RefCountedObject : AtomicRefCount<AtomicT>
 template <typename HeldT, Concepts::Atomic AtomicT>
 struct UniquePtrOverArc
 {
-    /// @brief Construct HeldT from args, allocating unique_ptr with given allcoator.
+    /// @brief Construct HeldT from args, allocating unique_ptr with given
+    /// allcoator.
     /// @tparam Alloc An allocator to use.
     /// @tparam Args HeldT's constructor args.
     ///
-    template <Concepts::CoroutineAllocator Alloc, typename ... Args>
-    UniquePtrOverArc(Alloc& alloc, Args&& ... args)
+    template <Concepts::CoroutineAllocator Alloc, typename... Args>
+    UniquePtrOverArc(Alloc &alloc, Args &&...args)
     {
-        std::unique_ptr<std::byte> bytes{reinterpret_cast<std::byte*>(alloc.allocate(sizeof(RefCountedObjectT)))};
-        ::new(bytes.get()) RefCountedObjectT{};
-        m_ptr.reset(reinterpret_cast<RefCountedObjectT*>(bytes.release()));
+        std::unique_ptr<std::byte> bytes{reinterpret_cast<std::byte *>(
+            alloc.allocate(sizeof(RefCountedObjectT)))};
+        ::new (bytes.get()) RefCountedObjectT{};
+        m_ptr.reset(reinterpret_cast<RefCountedObjectT *>(bytes.release()));
     }
 
     /// @brief Copy constructor. Take other's pointer and increment refcount.
     ///
-    UniquePtrOverArc(const UniquePtrOverArc& other)
+    UniquePtrOverArc(const UniquePtrOverArc &other)
     {
         m_ptr.reset(other.m_ptr.get());
         m_ptr->AddRef();
     }
 
-    /// @brief Copy assignment oeprator. Take other's pointer and increment refcount.
+    /// @brief Copy assignment oeprator. Take other's pointer and increment
+    /// refcount.
     ///
-    UniquePtrOverArc& operator=(const UniquePtrOverArc& other)
+    UniquePtrOverArc &operator=(const UniquePtrOverArc &other)
     {
         m_ptr.reset(other.m_ptr.get());
         m_ptr->AddRef();
@@ -79,11 +82,11 @@ struct UniquePtrOverArc
 
     /// @brief Default-movable.
     ///
-    UniquePtrOverArc(UniquePtrOverArc&& other) noexcept = default;
+    UniquePtrOverArc(UniquePtrOverArc &&other) noexcept = default;
 
     /// @brief Default-movable.
     ///
-    UniquePtrOverArc& operator=(UniquePtrOverArc&& other) noexcept = default;
+    UniquePtrOverArc &operator=(UniquePtrOverArc &&other) noexcept = default;
 
     /// @brief Default destructor.
     ///
@@ -91,14 +94,15 @@ struct UniquePtrOverArc
 
     /// @brief Operator to expose HeldT.
     ///
-    HeldT* operator->() const
+    HeldT *operator->() const
     {
         return &m_ptr->Object;
     }
 
 private:
     using RefCountedObjectT = RefCountedObject<HeldT, AtomicT>;
-    std::unique_ptr<RefCountedObjectT, typename RefCountedObjectT::Deleter> m_ptr{nullptr};
+    std::unique_ptr<RefCountedObjectT, typename RefCountedObjectT::Deleter>
+        m_ptr{nullptr};
 };
 
 } // namespace Cortado::Detail

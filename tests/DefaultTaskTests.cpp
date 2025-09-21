@@ -179,7 +179,8 @@ TEST(DefaultTaskTests, WhenAny)
     {
         Task<int> tasks[] = {task1(), task1(), task1()};
         co_await Cortado::WhenAny(tasks[0], tasks[1], tasks[2]);
-    }().Get();
+    }()
+                .Get();
 
     EXPECT_GE(v.load(), 0);
 }
