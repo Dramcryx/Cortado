@@ -8,7 +8,6 @@
 //
 #include <stdexcept>
 #include <thread>
-#include <type_traits>
 
 template <typename T>
 using Task = Cortado::Task<T>;

@@ -34,11 +34,7 @@ concept HasEvent = requires {
     // Event type is defined
     //
     typename T::Event;
-
-    // T::Event satisfies concept
-    //
-    Event<typename T::Event>;
-};
+} && Event<typename T::Event>;
 
 } // namespace Cortado::Concepts
 

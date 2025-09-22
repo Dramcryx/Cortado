@@ -29,11 +29,7 @@ concept HasCoroutineAllocator = requires {
     // Allocator type is defined
     //
     typename T::Allocator;
-
-    // T::Allocator satisfies concept
-    //
-    CoroutineAllocator<typename T::Allocator>;
-};
+} && CoroutineAllocator<typename T::Allocator>;
 
 } // namespace Cortado::Concepts
 

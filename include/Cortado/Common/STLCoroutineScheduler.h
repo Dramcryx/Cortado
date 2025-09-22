@@ -13,6 +13,8 @@
 namespace Cortado::Common
 {
 
+/// @brief A very silly scheduler for native example demonstration on Linux.
+///
 struct STLCoroutineScheduler
 {
     /// @brief Concept contract: Schedules coroutine in a different thread.
@@ -20,7 +22,11 @@ struct STLCoroutineScheduler
     ///
     void Schedule(std::coroutine_handle<> h)
     {
-        std::thread{[=]{h();}}.detach();
+        std::thread{[=]
+                    {
+                        h();
+                    }}
+            .detach();
     }
 
     /// @brief Concept contract: Get app-global scheduler instance.
