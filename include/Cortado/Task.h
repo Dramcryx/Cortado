@@ -29,22 +29,9 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
 {
     using Allocator = typename T::Allocator;
 
-    /// @brief Default constructor. Requires allocator to be
-    /// default-constructible.
+    /// @brief Default constructor.
     ///
-    PromiseType()
-        requires std::is_default_constructible_v<Allocator>
-    {
-    }
-
-    /// @brief Constructor from coroutine body args.
-    /// @tparam TArgs Coroutine body args.
-    ///
-    template <typename... TArgs>
-    PromiseType(TArgs &&...args) :
-        PromiseType{AllocatorSearchTag{}, std::forward<TArgs>(args)...}
-    {
-    }
+    PromiseType() = default;
 
     /// @brief Compiler contract: Defining `new` that uses custom allocator.
     ///
@@ -78,31 +65,6 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     /// @returns Task object.
     ///
     Task<R, T> get_return_object();
-
-private:
-    Allocator m_alloc;
-
-    /// @brief A marker type to search allocator within coroutine body args.
-    ///
-    struct AllocatorSearchTag
-    {
-    };
-
-    /// @brief Constructor which deducts allocator from coroutine body args.
-    ///
-    template <typename... TArgs>
-    PromiseType(AllocatorSearchTag, Allocator al, TArgs &&...args) : m_alloc{al}
-    {
-    }
-
-    /// @brief Constructor for coroutine without allocator within coroutine body
-    /// args.
-    ///
-    template <typename... TArgs>
-        requires std::is_default_constructible_v<Allocator>
-    PromiseType(AllocatorSearchTag, TArgs &&...args)
-    {
-    }
 };
 
 /// @brief Task implementation type.
