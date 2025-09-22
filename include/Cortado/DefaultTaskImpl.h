@@ -38,7 +38,16 @@ using DefaultScheduler = Common::Win32CoroutineScheduler;
 } // namespace Cortado
 
 #else
-#error "Linux is not implemented yet"
+
+// Cortado
+//
+#include <Cortado/Common/STLCoroutineScheduler.h>
+
+namespace Cortado
+{
+using DefaultScheduler = Common::STLCoroutineScheduler;
+} // namespace Cortado
+
 #endif
 
 #if defined(_WIN32)
