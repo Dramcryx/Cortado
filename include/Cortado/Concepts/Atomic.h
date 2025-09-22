@@ -45,11 +45,7 @@ concept HasAtomic = requires {
     // std::atomic_ulong or substitute
     //
     typename T::Atomic;
-
-    // T::Atomic satisfies concept
-    //
-    Atomic<typename T::Atomic>;
-};
+} && Atomic<typename T::Atomic>;
 
 } // namespace Cortado::Concepts
 
