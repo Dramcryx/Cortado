@@ -24,8 +24,8 @@ jobs:
         run: |
           cd install
           tar czf ../Cortado-${{ github.ref_name }}.tar.gz .
+          zip -r ../Cortado-${{ github.ref_name }}.zip .
           cd ..
-          zip -r Cortado-${{ github.ref_name }}.zip install/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
