@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF
+
+      - name: Install
+        run: cmake --build build --target install
+
+      - name: Package
+        run: |
+          cd install
+          tar czf ../Cortado-${{ github.ref_name }}.tar.gz .
+          cd ..
+          zip -r Cortado-${{ github.ref_name }}.zip install/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Cortado-${{ github.ref_name }}.tar.gz
+            Cortado-${{ github.ref_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

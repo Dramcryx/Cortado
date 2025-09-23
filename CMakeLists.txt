@@ -42,6 +42,19 @@ else()
     )
 endif()
 
+add_library(Cortado INTERFACE)
+target_include_directories(Cortado INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+install(DIRECTORY include/Cortado DESTINATION include)
+install(TARGETS Cortado EXPORT CortadoTargets)
+install(EXPORT CortadoTargets
+    FILE CortadoTargets.cmake
+    NAMESPACE Cortado::
+    DESTINATION lib/cmake/Cortado)
+
 # Native examples
 include(example/CMakeLists.txt)
 
@@ -49,4 +62,7 @@ include(example/CMakeLists.txt)
 include(doc/CMakeLists.txt)
 
 # Tests
-include(tests/CMakeLists.txt)
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    include(tests/CMakeLists.txt)
+endif()
