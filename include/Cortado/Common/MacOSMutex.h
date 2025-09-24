@@ -31,28 +31,47 @@ namespace V1
 class MacOSMutex
 {
 public:
+    /// @brief Constructor.
+    ///
     MacOSMutex() = default;
 
+    /// @brief Non-copyable.
+    ///
     MacOSMutex(const MacOSMutex &) = delete;
 
+    /// @brief Non-copyable.
+    ///
     MacOSMutex &operator=(const MacOSMutex &) = delete;
 
+    /// @brief Non-movable.
+    ///
     MacOSMutex(MacOSMutex &&) = delete;
 
+    /// @brief Non-movable.
+    ///
     MacOSMutex &operator=(MacOSMutex &&) = delete;
 
+    /// @brief Destructor.
+    ///
     ~MacOSMutex() = default;
 
+	/// @brief Concept contract: Call macOS API to lock the mutex.
+    ///
     void lock() noexcept
     {
         os_unfair_lock_lock(&m_lock);
     }
 
+	/// @brief Concept contract:
+    /// Call macOS API to try locking the mutex without blocking.
+    ///
     bool try_lock() noexcept
     {
         return os_unfair_lock_trylock(&m_lock);
     }
 
+	/// @brief Concept contract: Call macOS API to unlock the mutex.
+    ///
     void unlock() noexcept
     {
         os_unfair_lock_unlock(&m_lock);
@@ -75,18 +94,32 @@ namespace V2
 class MacOSMutex
 {
 public:
+    /// @brief Constructor.
+    ///
     MacOSMutex() = default;
 
+    /// @brief Non-copyable.
+    ///
     MacOSMutex(const MacOSMutex &) = delete;
 
+    /// @brief Non-copyable.
+    ///
     MacOSMutex &operator=(const MacOSMutex &) = delete;
 
+    /// @brief Non-movable.
+    ///
     MacOSMutex(MacOSMutex &&) = delete;
 
+    /// @brief Non-movable.
+    ///
     MacOSMutex &operator=(MacOSMutex &&) = delete;
 
+    /// @brief Destructor.
+    ///
     ~MacOSMutex() = default;
 
+	/// @brief Concept contract: Lock mutex, waiting if needed.
+    ///
     void lock() noexcept
     {
         unsigned long long expected = 0;
@@ -124,6 +157,8 @@ public:
         }
     }
 
+	/// @brief Concept contract: Try locking mutex without waiting.
+    ///
     bool try_lock() noexcept
     {
         uint64_t expected = 0;
@@ -133,6 +168,8 @@ public:
                                                std::memory_order_relaxed);
     }
 
+	/// @brief Concept contract: Unlock mutex, waking one waiter if any.
+    ///
     void unlock() noexcept
     {
         // store zero
