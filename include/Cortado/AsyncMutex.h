@@ -345,6 +345,7 @@ public:
     /// @brief Compiler contract: Resume action - restore AwaiterBase state
     /// and return RAII to AsyncMuex.
     ///
+    [[nodiscard("Lock will be immeditely released!")]]
     decltype(auto) await_resume() noexcept
     {
         AwaiterBase::await_resume();

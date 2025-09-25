@@ -9,3 +9,8 @@ if (APPLE)
   add_executable(native_example "example/exampleMacOS.cpp")
   target_include_directories(native_example PUBLIC ./include)
 endif()
+
+if (LINUX)
+  add_executable(native_example "example/exampleLinux.cpp")
+  target_include_directories(native_example PUBLIC ./include)
+endif()
