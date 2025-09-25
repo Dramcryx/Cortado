@@ -2,7 +2,6 @@
 /// Futex-based implementation of mutex.
 ///
 
-
 // STL
 //
 #include <atomic>
@@ -49,15 +48,16 @@ public:
     ///
     ~LinuxMutex() = default;
 
-	/// @brief Concept contract: Lock mutex, waiting if needed.
+    /// @brief Concept contract: Lock mutex, waiting if needed.
     ///
     void lock() noexcept
     {
         unsigned long expected = 0;
         // Fast path: try to acquire
-        if (m_state.compare_exchange_strong(expected, 1,
-                                         std::memory_order_acquire,
-                                         std::memory_order_relaxed))
+        if (m_state.compare_exchange_strong(expected,
+                                            1,
+                                            std::memory_order_acquire,
+                                            std::memory_order_relaxed))
         {
             return;
         }
@@ -66,9 +66,10 @@ public:
         while (true)
         {
             expected = 0;
-            if (m_state.compare_exchange_strong(expected, 1,
-                                             std::memory_order_acquire,
-                                             std::memory_order_relaxed))
+            if (m_state.compare_exchange_strong(expected,
+                                                1,
+                                                std::memory_order_acquire,
+                                                std::memory_order_relaxed))
             {
                 return; // acquired
             }
@@ -76,17 +77,18 @@ public:
         }
     }
 
-	/// @brief Concept contract: Try locking mutex without waiting.
+    /// @brief Concept contract: Try locking mutex without waiting.
     ///
     bool try_lock() noexcept
     {
         unsigned long expected = 0;
-        return m_state.compare_exchange_strong(expected, 1,
-                                            std::memory_order_acquire,
-                                            std::memory_order_relaxed);
+        return m_state.compare_exchange_strong(expected,
+                                               1,
+                                               std::memory_order_acquire,
+                                               std::memory_order_relaxed);
     }
 
-	/// @brief Concept contract: Unlock mutex and wake one waiter if any.
+    /// @brief Concept contract: Unlock mutex and wake one waiter if any.
     ///
     void unlock() noexcept
     {
@@ -102,10 +104,12 @@ private:
         int one = 1;
         // Wait while *m_state == 1
         int res = syscall(SYS_futex,
-                          reinterpret_cast<int*>(&m_state),
+                          reinterpret_cast<int *>(&m_state),
                           FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
                           one,
-                          nullptr, nullptr, 0);
+                          nullptr,
+                          nullptr,
+                          0);
 
         if (res == -1 && errno != EAGAIN && errno != EINTR)
         {
@@ -116,10 +120,12 @@ private:
     void futex_wake() noexcept
     {
         syscall(SYS_futex,
-                reinterpret_cast<int*>(&m_state),
+                reinterpret_cast<int *>(&m_state),
                 FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
                 1,
-                nullptr, nullptr, 0);
+                nullptr,
+                nullptr,
+                0);
     }
 };
 

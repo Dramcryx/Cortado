@@ -55,14 +55,14 @@ public:
     ///
     ~MacOSMutex() = default;
 
-	/// @brief Concept contract: Call macOS API to lock the mutex.
+    /// @brief Concept contract: Call macOS API to lock the mutex.
     ///
     void lock() noexcept
     {
         os_unfair_lock_lock(&m_lock);
     }
 
-	/// @brief Concept contract:
+    /// @brief Concept contract:
     /// Call macOS API to try locking the mutex without blocking.
     ///
     bool try_lock() noexcept
@@ -70,7 +70,7 @@ public:
         return os_unfair_lock_trylock(&m_lock);
     }
 
-	/// @brief Concept contract: Call macOS API to unlock the mutex.
+    /// @brief Concept contract: Call macOS API to unlock the mutex.
     ///
     void unlock() noexcept
     {
@@ -118,7 +118,7 @@ public:
     ///
     ~MacOSMutex() = default;
 
-	/// @brief Concept contract: Lock mutex, waiting if needed.
+    /// @brief Concept contract: Lock mutex, waiting if needed.
     ///
     void lock() noexcept
     {
@@ -157,7 +157,7 @@ public:
         }
     }
 
-	/// @brief Concept contract: Try locking mutex without waiting.
+    /// @brief Concept contract: Try locking mutex without waiting.
     ///
     bool try_lock() noexcept
     {
@@ -168,7 +168,7 @@ public:
                                                std::memory_order_relaxed);
     }
 
-	/// @brief Concept contract: Unlock mutex, waking one waiter if any.
+    /// @brief Concept contract: Unlock mutex, waking one waiter if any.
     ///
     void unlock() noexcept
     {

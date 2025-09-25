@@ -47,14 +47,15 @@ public:
     ///
     ~Win32Mutex() = default;
 
-	/// @brief Concept contract: Lock mutex, waiting if needed.
+    /// @brief Concept contract: Lock mutex, waiting if needed.
     ///
     void lock() noexcept
     {
         unsigned long expected = 0;
-        while (!m_state.compare_exchange_weak(expected, 1,
-                                             std::memory_order_acquire,
-                                             std::memory_order_relaxed))
+        while (!m_state.compare_exchange_weak(expected,
+                                              1,
+                                              std::memory_order_acquire,
+                                              std::memory_order_relaxed))
         {
             expected = 0;
             // Wait until state_ changes
@@ -62,17 +63,18 @@ public:
         }
     }
 
-	/// @brief Concept contract: Try locking mutex without waiting.
+    /// @brief Concept contract: Try locking mutex without waiting.
     ///
     bool try_lock() noexcept
     {
         unsigned long expected = 0;
-        return m_state.compare_exchange_strong(expected, 1,
+        return m_state.compare_exchange_strong(expected,
+                                               1,
                                                std::memory_order_acquire,
                                                std::memory_order_relaxed);
     }
 
-	/// @brief Concept contract: Unlock mutex and wake one waiter if any.
+    /// @brief Concept contract: Unlock mutex and wake one waiter if any.
     ///
     void unlock() noexcept
     {
@@ -81,7 +83,7 @@ public:
     }
 
 private:
-	std::atomic_ulong m_state{0};
+    std::atomic_ulong m_state{0};
 };
 
 } // namespace Cortado::Common
