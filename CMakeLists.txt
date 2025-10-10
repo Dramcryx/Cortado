@@ -55,6 +55,13 @@ install(EXPORT CortadoTargets
     NAMESPACE Cortado::
     DESTINATION lib/cmake/Cortado)
 
+# Install LLDB scripts
+install(
+    DIRECTORY tools/lldb/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/lldb
+    FILES_MATCHING PATTERN "*.py"
+)
+
 # Native examples
 include(example/CMakeLists.txt)
 

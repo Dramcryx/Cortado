@@ -19,14 +19,13 @@ According to my personal experience, there are additional limitations for older 
 
 # Goal
 
-The goal of this strategy is to provide a basic `Task` and set of common awaiters, which you can customize exception behavior, atomic implementation, and runtime implementation for basic things such as offloading coroutine to background (like `co_await winrt::resume_background()`). This is something that I would expect STL to offer but the current direction of commitee is towards `std::execution` rather than user-defined.
+The goal of this strategy is to provide a basic `Task` and set of common awaiters, which you can customize exception behavior, atomic implementation, and runtime implementation for basic things such as offloading coroutine to background (like `co_await winrt::resume_background()`), awaiting another coroutine or a group of them. This is something that I would expect STL to offer but the current direction of commitee is towards `std::execution` rather than user-defined.
 
 # Non-goal
 
 Performance tinkering. While this library aims to write optimal code following GSL practices, there is no space for low-level optimizations as they usually involve platform-specific work (both OS and hardware), which makes it too complex to maintain Cortado as platform-independent as possible.
 
 # TODO
-1) More test scenarios - fuzzy, TSAN, ASAN.
-2) Cancellation.
-3) Create default implementation for Linux.
+1) Implement cancellation.
+2) Support fuzzer.
 4) Support stack tracing - Natvis for cdb, scripts for gdb and lldb.

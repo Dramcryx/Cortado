@@ -49,7 +49,7 @@ Task<int> Ans4()
         co_await Cortado::ResumeBackground();
 
         sleep(rand() % 1);
-        co_await mutex.ScopedLockAsync();
+        auto lock = co_await mutex.ScopedLockAsync();
         ++count;
     };
 
