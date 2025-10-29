@@ -65,6 +65,15 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     /// @returns Task object.
     ///
     Task<R, T> get_return_object();
+
+    /// @brief Compiler contract: Core checkpoint for all awaiters
+    /// @returns Awaitable that is returned by respective `co_await` operator.
+    ///
+    template <typename U>
+    U &&await_transform(U &&awaitable) noexcept
+    {
+        return static_cast<U &&>(awaitable);
+    }
 };
 
 /// @brief Task implementation type.
