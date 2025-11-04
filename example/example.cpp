@@ -120,7 +120,7 @@ Task<int> AsyncMutexBackgroudContention()
 
         std::this_thread::sleep_for(std::chrono::seconds(rand() % 1));
 
-        co_await mutex.ScopedLockAsync();
+        auto lock = co_await mutex.ScopedLockAsync();
 
         ++count;
     };
