@@ -1,31 +1,151 @@
-# Cortado - a C++ coroutines strategy
+# Cortado — a C++ coroutines strategy
 
-# Introduction
-[C++ coroutines do not spark joy](https://probablydance.com/2021/10/31/c-coroutines-do-not-spark-joy/) and that is for multiple reasons:
-1) No library support - you are only provided with compiler contract on top of which you build your own library;
-2) No basic runtime support - use `boost::asio`, `Win32`, custom threadpools etc.;
-3) No stack trace support - also build your own.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Build Status](https://github.com/Dramcryx/Cortado/actions/workflows/cmake-multi-platform.yml/badge.svg?branch=master)](https://github.com/Dramcryx/Cortado/actions/workflows/cmake-multi-platform.yml)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)]()
 
-Even if we take all these into account, there are many similarities found across existing implementations:
-1) They return value or rethrow exception in a similar manner;
-2) They adress continuations (i.e. `co_await otherTask()`) in a similar manner;
-3) They introduce similar awaiters - to wait any, to wait all, resume when all etc.
+A small, flexible Task-based coroutine helper designed for legacy and constrained C++ runtimes.
+Cortado provides a minimal Task abstraction with pluggable allocators, exception handlers,
+atomics and schedulers so you can adopt coroutines without changing your project's runtime.
 
-According to my personal experience, there are additional limitations for older projects which you want to modernize using coroutines:
-1) they might rely on custom allocators - I cannot use coroutines with default `new`;
-2) they might rely on customized or extended exception handling:
-    - if they don't link STL runtime at all, you cannot use `std::exception_ptr` (unless you copy-paste ABI code which is a bad practice);
-	- if they do but deny raw `throw`/`catch` when handling errors, we also cannot use `std::exception_ptr` because all additional exception setup is lost when rethrowing an exception.
+---
 
-# Goal
+Table of contents
+- Introduction
+- Highlights
+- Quick examples
+  - Minimal Task
+  - Offload to background
+  - Await another Task
+  - Await multiple Tasks
+- Customization (change exception handler)
+- Getting started
+- Roadmap & TODO
+- Contributing & License
 
-The goal of this strategy is to provide a basic `Task` and set of common awaiters, which you can customize exception behavior, atomic implementation, and runtime implementation for basic things such as offloading coroutine to background (like `co_await winrt::resume_background()`), awaiting another coroutine or a group of them. This is something that I would expect STL to offer but the current direction of commitee is towards `std::execution` rather than user-defined.
+Introduction
+------------
+C++ coroutines provide language-level primitives but leave the supporting library/runtime to you.
+Cortado fills that gap with a small, opinionated Task type and a set of common awaiters,
+while keeping customization simple so you can plug in your project's allocator, exception model,
+atomic primitives or scheduler.
 
-# Non-goal
+Highlights
+----------
+- Small Task abstraction for suspendable functions.
+- Pluggable: allocator, atomic, exception handler and scheduler can be replaced.
+- Common awaiters: resume to background, when_all, when_any, awaiting other Tasks.
+- Designed for projects that can't or don't want to rely on the default STL runtime.
+- Focused on clarity and portability rather than microbenchmarks.
 
-Performance tinkering. While this library aims to write optimal code following GSL practices, there is no space for low-level optimizations as they usually involve platform-specific work (both OS and hardware), which makes it too complex to maintain Cortado as platform-independent as possible.
+Quick examples
+--------------
+Minimal Task
+```c++
+#include <Cortado/Task.h>
 
-# TODO
-1) Implement cancellation.
-2) Support fuzzer.
-4) Support stack tracing - Natvis for cdb, scripts for gdb and lldb.
+Cortado::Task<> DoNothing()
+{
+    co_return;
+}
+
+Cortado::Task<int> DoNothingWithValue()
+{
+    co_return 42;
+}
+```
+
+Offload to background
+```c++
+#include <Cortado/Await.h>
+
+Cortado::Task<int> DoNothingAsync()
+{
+    co_await Cortado::ResumeBackground(); // 1) start on main thread
+    co_return 42;                         // 2) resumes in a different thread
+}
+
+int main()
+{
+    int value = DoNothingAsync().Get(); // 42
+    return 0;
+}
+```
+
+Await another Task
+```c++
+#include <Cortado/Await.h>
+
+Cortado::Task<int> AsyncAction()
+{
+    int subResult = co_await DoNothingAsync(); // suspends until child finishes
+    co_return subResult + 1;
+}
+```
+
+Await multiple Tasks
+```c++
+#include <Cortado/Await.h>
+
+Cortado::Task<int> AsyncAction()
+{
+    Cortado::Task<int> tasks[] = { DoNothingAsync(), DoNothingAsync(), DoNothingAsync() };
+
+    co_await Cortado::WhenAll(tasks[0], tasks[1], tasks[2]);
+
+    int sum = tasks[0].Get() + tasks[1].Get() + tasks[2].Get();
+    co_return sum + 1;
+}
+```
+
+Customization — change exception handler
+---------------------------------------
+Cortado supports a user-provided ErrorHandler concept. Example (sketch):
+```c++
+// Implement your handler (no STL exception_ptr required)
+class SillyExceptionHandler
+{
+public:
+    using Exception = errno_t;
+
+    static Exception Catch()    { return EACCES; }
+    static void Rethrow(Exception e) { throw e; }
+};
+
+// Compose your Task implementation with custom pieces
+struct SillyTaskImpl :
+    Cortado::Common::STLAtomic,
+    Cortado::Common::STLCoroutineAllocator,
+    SillyExceptionHandler,
+    DefaultScheduler
+{
+    using Event = DefaultEvent;
+};
+
+template <typename T = void>
+using Task = Cortado::Task<T, SillyTaskImpl>;
+```
+
+Getting started
+---------------
+1. Download a release: https://github.com/Dramcryx/Cortado/releases  
+2. Copy headers from `include/` into your project's include directory.  
+3. `#include <Cortado/Await.h>` and try the minimal examples.  
+4. To customize, define your own Task implementation header referencing Cortado primitives.
+
+Roadmap & TODO
+--------------
+- Proper packaging and releases.
+- Better documentation and examples (including integration with various schedulers).
+- Cancellation support.
+- Fuzzer and tests.
+- Stack tracing support (Natvis scripts, gdb/lldb helpers).
+
+Contributing
+------------
+Contributions welcome. Follow typical GitHub flow: fork, create topic branch, open a PR.
+Keep changes focused and add tests/examples where appropriate.
+
+License
+-------
+MIT — see LICENSE file.
