@@ -98,7 +98,7 @@ jobs:
       if: ${{ matrix.cpp_compiler == 'clang++' }}
       run: |
         set -o pipefail
-        ./build/example 2>&1 | tee output.log
+        TSAN_OPTIONS="suppressions=$(pwd)/macOS-tsan.supp" ./build/example 2>&1 | tee output.log
         if grep -qE "WARNING|ThreadSanitizer" output.log; then
           echo "❌ Found warnings in output"
           exit 1

@@ -1,0 +1,5 @@
+# Ignore known false positives in libc++ iostream on macOS
+race:std::__1::ios_base
+race:std::__1::__pad_and_output
+race:std::__1::locale
+race:std::__1::basic_ostream
