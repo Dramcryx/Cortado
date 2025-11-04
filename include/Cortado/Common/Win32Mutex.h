@@ -59,7 +59,10 @@ public:
         {
             expected = 0;
             // Wait until state_ changes
-            WaitOnAddress(&m_state, &expected, sizeof(expected), INFINITE);
+            WaitOnAddress(&m_state,
+                          &expected,
+                          sizeof(expected),
+                          0xFFFFFFFF /*infinite*/);
         }
     }
 

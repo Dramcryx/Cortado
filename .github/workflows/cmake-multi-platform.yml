@@ -80,7 +80,7 @@ jobs:
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.cpp_compiler == 'clang++' }}
       run: |
         set -o pipefail
-        ./build/native_example 2>&1 | tee output.log
+        ./build/example 2>&1 | tee output.log
         if grep -qE "WARNING|ThreadSanitizer" output.log; then
           echo "❌ Found warnings in output"
           exit 1
