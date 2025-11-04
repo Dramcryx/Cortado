@@ -13,6 +13,7 @@
 #include <array>
 #include <format>
 #include <iostream>
+#include <thread>
 
 using namespace Cortado;
 using namespace Cortado::Common;
