@@ -138,9 +138,9 @@ TEST(DefaultTaskTests, AwaitOnScheduler)
     auto testThreadId = std::this_thread::get_id();
     auto backgroundThreadId = testThreadId;
 
+    SchedulerT sched;
     static auto task1 = [&]() -> Task<void>
     {
-        SchedulerT sched;
         co_await sched;
 
         backgroundThreadId = std::this_thread::get_id();

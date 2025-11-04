@@ -37,15 +37,25 @@ namespace Cortado
 using DefaultScheduler = Common::Win32CoroutineScheduler;
 } // namespace Cortado
 
-#else
+#elif defined(_POSIX_VERSION)
 
 // Cortado
 //
-#include <Cortado/Common/STLCoroutineScheduler.h>
+#include <Cortado/Common/PosixCoroutineScheduler.h>
 
 namespace Cortado
 {
-using DefaultScheduler = Common::STLCoroutineScheduler;
+using DefaultScheduler = Common::PosixCoroutineScheduler;
+} // namespace Cortado
+
+#else
+
+namespace Cortado
+{
+struct NoScheduler
+{
+};
+using DefaultScheduler = NoScheduler;
 } // namespace Cortado
 
 #endif
@@ -70,6 +80,16 @@ using DefaultEvent = Common::Win32Event;
 namespace Cortado
 {
 using DefaultEvent = Common::PosixEvent;
+} // namespace Cortado
+
+#else
+
+namespace Cortado
+{
+struct NoEvent
+{
+};
+using DefaultScheduler = NoEvent;
 } // namespace Cortado
 
 #endif
