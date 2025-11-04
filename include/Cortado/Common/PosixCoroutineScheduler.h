@@ -5,6 +5,8 @@
 #ifndef CORTADO_COMMON_POSIX_COROUTINE_SCHEDULER_H
 #define CORTADO_COMMON_POSIX_COROUTINE_SCHEDULER_H
 
+#ifdef _POSIX_VERSION
+
 // POSIX
 //
 #include <pthread.h>
@@ -132,5 +134,7 @@ private:
 };
 
 } // namespace Cortado::Common
+
+#endif // _POSIX_VERSION
 
 #endif // CORTADO_COMMON_POSIX_COROUTINE_SCHEDULER_H
