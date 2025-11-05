@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.10)
 
-project ("Cortado" VERSION 0.1.0 LANGUAGES CXX)
+project ("Cortado" VERSION 0.1.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -112,6 +112,8 @@ install(
     DESTINATION lib/cmake/Cortado
 )
 
+install(FILES nuget/Cortado.targets DESTINATION build/native)
+
 # CPack configuration
 
 # 1. Set packaging metadata
@@ -123,9 +125,10 @@ set(CPACK_PACKAGE_CONTACT "jopa19991@gmail.com")
 set(CPACK_GENERATOR "NuGet")
 set(CPACK_NUGET_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
 set(CPACK_NUGET_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}")
-set(CPACK_NUGET_AUTHOR "Maksim Vlasov")
-set(CPACK_NUGET_DESCRIPTION "Coroutine library for projects with strong legacy or limited STL usage.")
-set(CPACK_NUGET_LICENSE_URL "https://opensource.org/licenses/MIT")
+set(CPACK_NUGET_PACKAGE_OWNERS "Maksim Vlasov")
+set(CPACK_NUGET_PACKAGE_DESCRIPTION "Coroutine library for projects with strong legacy or limited STL usage.")
+set(CPACK_NUGET_PACKAGE_LICENSEURL "https://opensource.org/licenses/MIT")
+set(CPACK_NUGET_PACKAGE_REPOSITORY_URL "https://github.com/Dramcryx/Cortado")
 
 # 3. Enable DEB/RPM packaging
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "jopa19991@gmail.com")
