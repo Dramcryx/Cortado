@@ -6,8 +6,11 @@ on:
       - "v*"
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest
+
+    environment: release
+
     permissions:
       contents: write
       id-token: write  # enable GitHub OIDC token issuance for this job
@@ -15,13 +18,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Mono + NuGet CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mono-devel
-          mkdir -p "$HOME/.nuget"
-          curl -L https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o "$HOME/.nuget/nuget.exe"
-          echo "alias nuget='mono $HOME/.nuget/nuget.exe'" >> "${BASH_ENV}"
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF
@@ -32,14 +30,13 @@ jobs:
       - name: Package (tar/zip)
         run: |
           cd install
-          tar czf ../Cortado-${{ github.ref_name }}.tar.gz .
-          zip -r ../Cortado-${{ github.ref_name }}.zip .
+          7z a ..\Cortado-${{ github.ref_name }}.zip .\*
+          7z a -ttar ..\Cortado-${{ github.ref_name }}.tar .\*
+          7z a -tgzip ..\Cortado-${{ github.ref_name }}.tar.gz ..\Cortado-${{ github.ref_name }}.tar
           cd ..
 
-      - name: Package (NuGet)
-        run: |
-          cpack -G NuGet --config build/CPackConfig.cmake
-          ls -1 *.nupkg || true
+      - name: Package (CPack)
+        run: cpack -G NuGet --config build/CPackConfig.cmake
 
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@v1
@@ -50,14 +47,14 @@ jobs:
       - name: Publish NuGet package
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          mono nuget push Cortado.${{ github.ref_name }}.nupkg -Source https://api.nuget.org/v3/index.json -ApiKey ${{steps.login.outputs.NUGET_API_KEY}} || exit 1
+          nuget push Cortado*.nupkg -Source https://api.nuget.org/v3/index.json -ApiKey ${{steps.login.outputs.NUGET_API_KEY}}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Cortado-${{ github.ref_name }}.tar.gz
-            Cortado-${{ github.ref_name }}.zip
-            Cortado.${{ github.ref_name }}.nupkg
+            Cortado*.tar.gz
+            Cortado*.zip
+            Cortado*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
