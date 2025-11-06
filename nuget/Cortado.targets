@@ -1,5 +1,5 @@
 <Project>
   <ItemGroup>
-    <IncludePath Include="$(MSBuildThisPackageDirectory)include" />
+    <IncludePath Include="$(MSBuildThisPackageDirectory)..\include" />
   </ItemGroup>
 </Project>
