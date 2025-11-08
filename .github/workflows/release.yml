@@ -22,21 +22,21 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF
+          cmake -S . -B build-nuget -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF -DCPACK_GENERATOR=NuGet
 
       - name: Install
-        run: cmake --build build --target install
-
-      - name: Package (tar/zip)
         run: |
-          cd install
-          7z a ..\Cortado-${{ github.ref_name }}.zip .\*
-          7z a -ttar ..\Cortado-${{ github.ref_name }}.tar .\*
-          7z a -tgzip ..\Cortado-${{ github.ref_name }}.tar.gz ..\Cortado-${{ github.ref_name }}.tar
-          cd ..
+            cmake --build build --target install
+            cmake --build build-nuget --target install
 
-      - name: Package (CPack)
-        run: cpack -G NuGet --config build/CPackConfig.cmake
+      - name: Package (tgz, zip, deb, NuGet)
+        run: |
+          cpack -G TGZ --config .\build\CPackConfig.cmake
+          cpack -G ZIP --config .\build\CPackConfig.cmake
+          cpack -G DEB --config .\build\CPackConfig.cmake
+          cpack -G NuGet --config .\build-nuget\CPackConfig.cmake
 
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@v1

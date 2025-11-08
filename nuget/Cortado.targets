@@ -1,5 +1,7 @@
 <Project>
-  <ItemGroup>
-    <IncludePath Include="$(MSBuildThisPackageDirectory)..\include" />
-  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
 </Project>
