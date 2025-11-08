@@ -55,6 +55,7 @@ jobs:
           files: |
             Cortado*.tar.gz
             Cortado*.zip
+            Cortado*.deb
             Cortado*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
