@@ -128,10 +128,40 @@ using Task = Cortado::Task<T, SillyTaskImpl>;
 
 Getting started
 ---------------
-1. Download a release: https://github.com/Dramcryx/Cortado/releases  
-2. Copy headers from `include/` into your project's include directory.  
-3. `#include <Cortado/Await.h>` and try the minimal examples.  
-4. To customize, define your own Task implementation header referencing Cortado primitives.
+CMake on any platform
+---------------
+If your project supports CMake, the best way it to do the same way as Google Test:
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+    Cortado
+    GIT_REPOSITORY https://github.com/Dramcryx/Cortado.git
+)
+FetchContent_MakeAvailable(Cortado)
+
+add_executable(YOUR_TARGET main.cpp)
+
+target_link_libraries(YOUR_TARGET PRIVATE Cortado)
+```
+Replace `YOUR_TARGET` with the actual target you are building. Cortado headers will be available since then.
+
+Debian package (Debian, Ubuntu, Linux Mint etc.)
+---------------
+Download a deb package from releases: https://github.com/Dramcryx/Cortado/releases, then from terminal:
+```
+sudo dpkg -i Cortado-0.1.5.deb
+```
+
+RPM package (Fedora)
+---------------
+```
+sudo rpm -i Cortado-0.1.5.rpm
+```
+
+NuGet package
+---------------
+In Visual Sutdio with your project open right-click on project -> `Manage NuGet Packages...` -> `Browse` -> type `Cortado` and install latest version.
 
 Roadmap & TODO
 --------------

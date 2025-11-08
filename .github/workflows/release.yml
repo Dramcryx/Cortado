@@ -23,20 +23,15 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF
-          cmake -S . -B build-nuget -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF -DCPACK_GENERATOR=NuGet
-
-      - name: Install
-        run: |
-            cmake --build build --target install
-            cmake --build build-nuget --target install
+          cmake -S . -B out -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF
+          cmake -S . -B out-nuget -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DBUILD_TESTING=OFF -DCPACK_GENERATOR=NuGet
 
       - name: Package (tgz, zip, deb, NuGet)
         run: |
-          cpack -G TGZ --config .\build\CPackConfig.cmake
-          cpack -G ZIP --config .\build\CPackConfig.cmake
-          cpack -G DEB --config .\build\CPackConfig.cmake
-          cpack -G NuGet --config .\build-nuget\CPackConfig.cmake
+          cpack -G TGZ --config .\out\CPackConfig.cmake
+          cpack -G ZIP --config .\out\CPackConfig.cmake
+          cpack -G DEB --config .\out\CPackConfig.cmake
+          cpack -G NuGet --config .\out-nuget\CPackConfig.cmake
 
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@v1

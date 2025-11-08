@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.10)
 
-project ("Cortado" VERSION 0.1.4 LANGUAGES CXX)
+project ("Cortado" VERSION 0.1.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -50,7 +50,7 @@ include(example/CMakeLists.txt)
 include(doc/CMakeLists.txt)
 
 # Tests
-option(BUILD_TESTING "Build tests" ON)
+option(BUILD_TESTING "Build tests" OFF)
 if(BUILD_TESTING)
     include(tests/CMakeLists.txt)
 endif()
@@ -112,28 +112,35 @@ install(
     DESTINATION lib/cmake/Cortado
 )
 
+# CPack configuration
+
+# 1. Set packaging metadata
+
+set(CPACK_PACKAGE_NAME "Cortado")
+set(CPACK_PACKAGE_VENDOR "Maksim Vlasov")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_CONTACT "jopa19991@gmail.com")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Coroutine library for projects with strong legacy or limited STL usage.")
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION})
+
+# 2. Enable NuGet packaging
+
+# We need .targets file only for NuGet, that's why CI
+# builds it in a separate configuration with -DCPACK_GENERATOR=NuGet
 if (CPACK_GENERATOR STREQUAL "NuGet")
     install(FILES nuget/Cortado.targets DESTINATION build)
 endif()
 
-# CPack configuration
+set(CPACK_NUGET_PACKAGE_LICENSE_EXPRESSION "MIT")
+set(CPACK_NUGET_PACKAGE_REPOSITORY_URL "https://github.com/Dramcryx/Cortado.git")
+set(CPACK_NUGET_PACKAGE_REPOSITORY_TYPE git)
+set(CPACK_NUGET_PACKAGE_DESCRIPTION "A small, flexible Task-based coroutine helper designed for legacy and constrained C++ runtimes.
+Cortado provides a minimal Task abstraction with pluggable allocators, exception handlers,
+atomics and schedulers so you can adopt coroutines without changing your project's runtime.")
+set(CPACK_NUGET_PACKAGE_REPOSITORY_BRANCH "master")
 
-# 1. Set packaging metadata
-set(CPACK_PACKAGE_NAME "Cortado")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_CONTACT "jopa19991@gmail.com")
+# 3. RPM specific variables
 
-# 2. Enable NuGet packaging
-set(CPACK_NUGET_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
-set(CPACK_NUGET_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}")
-set(CPACK_NUGET_PACKAGE_OWNERS "Maksim Vlasov")
-set(CPACK_NUGET_PACKAGE_DESCRIPTION "Coroutine library for projects with strong legacy or limited STL usage.")
-set(CPACK_NUGET_PACKAGE_LICENSEURL "https://opensource.org/licenses/MIT")
-set(CPACK_NUGET_PACKAGE_REPOSITORY_URL "https://github.com/Dramcryx/Cortado")
-
-# 3. Enable DEB/RPM packaging
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "jopa19991@gmail.com")
-set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
 include(CPack)
