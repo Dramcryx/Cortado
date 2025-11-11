@@ -46,7 +46,7 @@ struct AdditionalStorageHelper
 template <typename T>
 struct AdditionalStorageHelper<T, false>
 {
-    /// @brief Human-readable no user storage indicator.
+    /// @brief Human-readable "no user storage" indicator.
     ///
     struct Nothing
     {
@@ -92,12 +92,10 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
                 // this frame is outside of coroutine function body.
                 //
                 _this.m_completionEvent.Set();
-                _this.CallbackValueRendezvous();
-
-                auto next = _this.m_continuation;
+                auto next = _this.CallbackValueRendezvous();
                 if (next != nullptr)
                 {
-                    next();
+                    next.resume();
                 }
 
                 return _this.Release() > 0;
@@ -197,30 +195,6 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         }
     }
 
-    /// @brief Handle race-condition between a thread that sets value and a
-    /// thread that sets continuation. If value thread succeeds, we just return.
-    /// Otherwise we call continuation (i.e. continuation was set after
-    /// coroutine completion).
-    ///
-    void CallbackValueRendezvous()
-    {
-        CallbackRaceState expectedState = CallbackRaceState::None;
-        if (m_callbackRace.compare_exchange_strong(
-                *reinterpret_cast<Concepts::AtomicPrimitive *>(&expectedState),
-                static_cast<Concepts::AtomicPrimitive>(
-                    CallbackRaceState::Value)))
-        {
-            // Successfully stored value first
-            return;
-        }
-        else if (expectedState == CallbackRaceState::Callback)
-        {
-            // Callback was already set, do the rendezvous
-            m_continuation();
-            m_continuation = nullptr;
-        }
-    }
-
 protected:
     using ExceptionT = typename T::Exception;
     using AtomicT = typename T::Atomic;
@@ -261,6 +235,33 @@ protected:
         {
             T::Rethrow(std::move(m_storage.UnsafeError()));
         }
+    }
+
+private:
+    /// @brief Handle race-condition between a thread that sets value and a
+    /// thread that sets continuation. If value thread succeeds, we return nullptr.
+    /// Otherwise we return pointer to continuation (i.e. continuation was set after
+    /// coroutine completion).
+    /// @returns Continuation or nullptr;
+    ///
+    std::coroutine_handle<> CallbackValueRendezvous()
+    {
+        CallbackRaceState expectedState = CallbackRaceState::None;
+        if (m_callbackRace.compare_exchange_strong(
+                *reinterpret_cast<Concepts::AtomicPrimitive *>(&expectedState),
+                static_cast<Concepts::AtomicPrimitive>(
+                    CallbackRaceState::Value)))
+        {
+            // Successfully stored value first
+            return nullptr;
+        }
+        else if (expectedState == CallbackRaceState::Callback)
+        {
+            // Callback was already set, return to final_suspend
+            return m_continuation;
+        }
+
+        return nullptr;
     }
 };
 
