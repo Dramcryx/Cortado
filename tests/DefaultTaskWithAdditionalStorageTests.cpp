@@ -22,7 +22,7 @@ struct UserStorage
 {
     inline static std::mutex TestResultMutex;
     inline static std::unordered_map<std::string,
-                                     std::pair<unsigned long, unsigned long>>
+                                     std::pair<long long, long long>>
         TestResultStorage;
 
     UserStorage() = default;
@@ -89,8 +89,8 @@ TEST(DefaultTaskWithAdditionalStorageTests, ResumeBackgroundTest)
 
     task().Get();
 
-    unsigned long beforeSuspend = 0;
-    unsigned long beforeResume = 0;
+    long long beforeSuspend = 0;
+    long long beforeResume = 0;
 
     std::string testName = GetCurrentTestName();
 

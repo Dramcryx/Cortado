@@ -7,6 +7,7 @@
 
 // STL
 //
+#include <cstdint>
 #include <concepts>
 
 namespace Cortado::Concepts
@@ -15,11 +16,12 @@ namespace Cortado::Concepts
 /// @brief Atomic primitve used across @link Cortado::Concepts::TaskImpl
 /// TaskImpl@endlink.
 ///
-using AtomicPrimitive = unsigned long;
+using AtomicPrimitive = std::int64_t;
 
 /// @brief Concept of atomic variable
 /// Atomic requires: <br>
-/// 1) Construction from any integer which initializes respective value; <br>
+/// 0) Being able to store pointer!
+/// 1) Construction from any integer which initializes respective value. <br>
 /// 2) Atomic pre-increment and pre-decrement. <br>
 /// 3) Atomic compare exchange.
 /// @tparam T Candidate type for atomicity.
@@ -27,6 +29,7 @@ using AtomicPrimitive = unsigned long;
 template <typename T>
 concept Atomic =
     requires(T t, AtomicPrimitive &expected, AtomicPrimitive desired) {
+        sizeof(AtomicPrimitive) >= sizeof(void *);
         { T{AtomicPrimitive{}} };
         { t.load() } -> std::same_as<AtomicPrimitive>;
         { t.store(AtomicPrimitive{}) } -> std::same_as<void>;
@@ -42,7 +45,7 @@ concept Atomic =
 ///
 template <typename T>
 concept HasAtomic = requires {
-    // std::atomic_ulong or substitute
+    // std::atomic_int64_t or substitute
     //
     typename T::Atomic;
 } && Atomic<typename T::Atomic>;

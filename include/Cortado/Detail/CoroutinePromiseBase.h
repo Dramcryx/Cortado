@@ -19,16 +19,6 @@
 namespace Cortado::Detail
 {
 
-/// @brief Typed atomic primitive to use for a race condition
-/// between callback and a value.
-///
-enum class CallbackRaceState : Concepts::AtomicPrimitive
-{
-    None = 0,
-    Value,
-    Callback
-};
-
 /// @brief Helper class to define user-defined storage for coroutine.
 /// @tparam T TaskImpl type.
 /// @tparam FHasAdditionaStorage boolean inidicating if TaskImpl defines
@@ -92,7 +82,7 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
                 // this frame is outside of coroutine function body.
                 //
                 _this.m_completionEvent.Set();
-                auto next = _this.CallbackValueRendezvous();
+                auto next = std::coroutine_handle<>::from_address(_this.CallbackValueRendezvous());
                 if (next != nullptr)
                 {
                     next.resume();
@@ -152,20 +142,18 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
     ///
     bool SetContinuation(std::coroutine_handle<> h)
     {
-        m_continuation = h;
-        CallbackRaceState expectedState = CallbackRaceState::None;
-        if (m_callbackRace.compare_exchange_strong(
-                *reinterpret_cast<Concepts::AtomicPrimitive *>(&expectedState),
-                static_cast<Concepts::AtomicPrimitive>(
-                    CallbackRaceState::Callback)))
+        auto expectedState = NoCompletionState;
+
+        auto desiredState = reinterpret_cast<Concepts::AtomicPrimitive>(h.address());
+
+        if (m_continuation.compare_exchange_strong(expectedState, desiredState))
         {
             // Successfully stored callback first
             return true;
         }
-        else if (expectedState == CallbackRaceState::Value)
+        else if (expectedState == ValueCompletionState)
         {
-            m_continuation();
-            m_continuation = nullptr;
+            h.resume();
         }
 
         return false;
@@ -201,19 +189,16 @@ protected:
     using EventT = typename T::Event;
 
     static constexpr bool HasUserStroage = Concepts::HasAdditionalStorage<T>;
+
     using AdditionalStorageT =
         AdditionalStorageHelper<T, HasUserStroage>::AdditionalStorageT;
+
+    static constexpr Concepts::AtomicPrimitive NoCompletionState = 0;
+    static constexpr Concepts::AtomicPrimitive ValueCompletionState = 1;
 
     /// @brief Essential storage - stores value or exception.
     ///
     CoroutineStorage<R, ExceptionT, AtomicT> m_storage;
-
-    /// @brief Race flag between possible continuation and coroutine.
-    /// See @link Cortado::Detail::CoroutinePromiseBase::CallbackValueRendezvous
-    /// CallbackValueRendezvous@endlink for usage.
-    ///
-    AtomicT m_callbackRace{
-        static_cast<Concepts::AtomicPrimitive>(CallbackRaceState::None)};
 
     /// @brief Completion event.
     ///
@@ -221,7 +206,7 @@ protected:
 
     /// @brief Continuation - the coroutine that awaits for this one, if any.
     ///
-    std::coroutine_handle<> m_continuation = nullptr;
+    AtomicT m_continuation = 0;
 
     /// @brief Optional user storage.
     ///
@@ -244,21 +229,21 @@ private:
     /// coroutine completion).
     /// @returns Continuation or nullptr;
     ///
-    std::coroutine_handle<> CallbackValueRendezvous()
+    void* CallbackValueRendezvous()
     {
-        CallbackRaceState expectedState = CallbackRaceState::None;
-        if (m_callbackRace.compare_exchange_strong(
-                *reinterpret_cast<Concepts::AtomicPrimitive *>(&expectedState),
-                static_cast<Concepts::AtomicPrimitive>(
-                    CallbackRaceState::Value)))
+        auto expectedState = NoCompletionState;
+
+        auto desiredState = ValueCompletionState;
+
+        if (m_continuation.compare_exchange_strong(expectedState, desiredState))
         {
             // Successfully stored value first
             return nullptr;
         }
-        else if (expectedState == CallbackRaceState::Callback)
+        else if (expectedState > 1)
         {
             // Callback was already set, return to final_suspend
-            return m_continuation;
+            return reinterpret_cast<void*>(expectedState);
         }
 
         return nullptr;

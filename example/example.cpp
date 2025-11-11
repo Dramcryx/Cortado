@@ -18,7 +18,7 @@
 using namespace Cortado;
 using namespace Cortado::Common;
 
-using MutexT = AsyncMutex<std::atomic_ulong, NativeMutexT>;
+using MutexT = AsyncMutex<std::atomic_int64_t, NativeMutexT>;
 
 class WithAsyncMethod
 {

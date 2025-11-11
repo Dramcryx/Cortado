@@ -16,7 +16,7 @@ namespace Cortado::Common
 ///
 struct STLAtomic
 {
-    using Atomic = std::atomic_ulong;
+    using Atomic = std::atomic_int64_t;
 };
 
 } // namespace Cortado::Common
