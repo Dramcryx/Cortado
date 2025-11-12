@@ -5,11 +5,15 @@
 #ifndef CORTADO_COMMON_POSIX_EVENT_H
 #define CORTADO_COMMON_POSIX_EVENT_H
 
-#ifdef _POSIX_VERSION
+#if defined(_POSIX_VERSION) || defined(__APPLE__)
 
 // POSIX
 //
 #include <pthread.h>
+
+// STL
+//
+#include <atomic>
 
 namespace Cortado::Common
 {
@@ -57,7 +61,7 @@ public:
     {
         PthreadAutoLock autoLock{&m_mutex};
 
-        while (!m_signaled)
+        while (!m_signaled.load())
         {
             pthread_cond_wait(&m_cv, &m_mutex);
         }
@@ -97,7 +101,7 @@ public:
     {
         PthreadAutoLock autoLock{&m_mutex};
 
-        m_signaled = true;
+        m_signaled.store(true);
         pthread_cond_broadcast(&m_cv);
     }
 
@@ -111,7 +115,7 @@ public:
     }
 
 private:
-    bool m_signaled = false;
+    std::atomic_bool m_signaled;
     pthread_mutex_t m_mutex;
     pthread_cond_t m_cv;
 
@@ -133,6 +137,6 @@ private:
 
 } // namespace Cortado::Common
 
-#endif // _POSIX_VERSION
+#endif // _POSIX_VERSION || __APPLE__
 
 #endif

@@ -72,7 +72,7 @@ protected:
 
 private:
     std::coroutine_handle<> m_handle{nullptr};
-    Detail::BeforeResumeFuncT m_beforeResumeFunc;
+    Detail::BeforeResumeFuncT m_beforeResumeFunc{nullptr};
 };
 
 /// @brief Task-to-task awaiter implementation.

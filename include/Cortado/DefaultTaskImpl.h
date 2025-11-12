@@ -7,6 +7,7 @@
 
 // Cortado
 //
+#include <Cortado/DefaultEvent.h>
 #include <Cortado/Common/STLAtomic.h>
 #include <Cortado/Common/STLCoroutineAllocator.h>
 #include <Cortado/Common/STLExceptionHandler.h>
@@ -56,40 +57,6 @@ struct NoScheduler
 {
 };
 using DefaultScheduler = NoScheduler;
-} // namespace Cortado
-
-#endif
-
-#if defined(_WIN32)
-
-// Cortado
-//
-#include <Cortado/Common/Win32Event.h>
-
-namespace Cortado
-{
-using DefaultEvent = Common::Win32Event;
-} // namespace Cortado
-
-#elif defined(_POSIX_VERSION)
-
-// Cortado
-//
-#include <Cortado/Common/PosixEvent.h>
-
-namespace Cortado
-{
-using DefaultEvent = Common::PosixEvent;
-} // namespace Cortado
-
-#else
-
-namespace Cortado
-{
-struct NoEvent
-{
-};
-using DefaultScheduler = NoEvent;
 } // namespace Cortado
 
 #endif

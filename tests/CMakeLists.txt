@@ -10,7 +10,17 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(CortadoTests ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskTests.cpp ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskWithAdditionalStorageTests.cpp)
+add_executable(
+    CortadoTests
+    ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskTests.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskWithAdditionalStorageTests.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/AsyncMutexTests.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/DefaultMutexTests.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/DefaultEventTests.cpp)
+
+if (WIN32)
+  target_link_libraries(CortadoTests PRIVATE Synchronization.lib)
+endif()
 
 target_link_libraries(CortadoTests PRIVATE GTest::gtest_main GTest::gtest)
 target_include_directories(CortadoTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -30,8 +40,16 @@ if (MSVC)
         endif()
     endif()
     foreach(flag_var
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE)
+        CMAKE_C_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        CMAKE_C_FLAGS_RELWITHDEBINFO
+        CMAKE_C_FLAGS_MINSIZEREL
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        CMAKE_CXX_FLAGS_MINSIZEREL)
         if(${flag_var} MATCHES "/MDd")
             string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
         endif()

@@ -52,7 +52,7 @@ public:
     ///
     void lock() noexcept
     {
-        unsigned long expected = 0;
+        int expected = 0;
         // Fast path: try to acquire
         if (m_state.compare_exchange_strong(expected,
                                             1,
@@ -81,7 +81,7 @@ public:
     ///
     bool try_lock() noexcept
     {
-        unsigned long expected = 0;
+        int expected = 0;
         return m_state.compare_exchange_strong(expected,
                                                1,
                                                std::memory_order_acquire,
@@ -97,7 +97,7 @@ public:
     }
 
 private:
-    std::atomic_ulong m_state{0};
+    std::atomic<int> m_state{0};
 
     void futex_wait() noexcept
     {
@@ -105,7 +105,7 @@ private:
         // Wait while *m_state == 1
         int res = syscall(SYS_futex,
                           reinterpret_cast<int *>(&m_state),
-                          FUTEX_WAIT | FUTEX_PRIVATE_FLAG,
+                          FUTEX_WAIT_PRIVATE,
                           one,
                           nullptr,
                           nullptr,
@@ -113,7 +113,7 @@ private:
 
         if (res == -1 && errno != EAGAIN && errno != EINTR)
         {
-            // real code would handle errors properly
+            std::abort();
         }
     }
 
@@ -121,7 +121,7 @@ private:
     {
         syscall(SYS_futex,
                 reinterpret_cast<int *>(&m_state),
-                FUTEX_WAKE | FUTEX_PRIVATE_FLAG,
+                FUTEX_WAKE_PRIVATE,
                 1,
                 nullptr,
                 nullptr,
