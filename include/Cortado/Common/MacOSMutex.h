@@ -181,7 +181,7 @@ public:
     }
 
 private:
-    std::atomic<uint64_t> m_state;
+    std::atomic<uint64_t> m_state{0};
 };
 
 } // namespace V2

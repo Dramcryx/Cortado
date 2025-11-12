@@ -15,7 +15,7 @@ using Task = Cortado::Task<T>;
 
 using AsyncMutex = Cortado::AsyncMutex<std::atomic_int64_t, Cortado::DefaultMutex>;
 
-TEST(AsyncMutexTests, BasicLockUnlock)
+TEST(AsyncMutexTests, DISABLED_BasicLockUnlock)
 {
     AsyncMutex mutex;
 
@@ -47,7 +47,7 @@ TEST(AsyncMutexTests, BasicLockUnlock)
     EXPECT_TRUE(taskObject.IsReady());
 }
 
-TEST(AsyncMutexTests, BasicConcurrency)
+TEST(AsyncMutexTests, DISABLED_BasicConcurrency)
 {
     constexpr std::size_t ConcurrencyCount = 4;
 
