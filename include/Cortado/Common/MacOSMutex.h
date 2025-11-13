@@ -99,6 +99,9 @@ namespace V2
 class MacOSMutex : public MutexBase<MacOSMutex>
 {
 public:
+    /// @brief MutexBase contract: wait futex
+    /// @param state Futex to wait
+    ///
     void WaitOnAddress(std::atomic<int>* state)
     {
         uint64_t expected = 1;
@@ -106,6 +109,9 @@ public:
                                 OS_SYNC_WAIT_ON_ADDRESS_NONE);
     }
 
+    /// @brief MutexBase contract: wake futex waiter
+    /// @param state Futex to wake
+    ///
     void WakeOne(std::atomic<int>* state)
     {
         os_sync_wake_by_address_any(state,

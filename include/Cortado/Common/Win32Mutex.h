@@ -24,12 +24,18 @@ namespace Cortado::Common
 class Win32Mutex : public MutexBase<Win32Mutex>
 {
 public:
+    /// @brief MutexBase contract: wait futex
+    /// @param state Futex to wait
+    ///
     void WaitOnAddress(std::atomic<int> *state)
     {
         int expected = 1;
         ::WaitOnAddress(state, &expected, sizeof(expected), INFINITE);
     }
 
+    /// @brief MutexBase contract: wake futex waiter
+    /// @param state Futex to wake
+    ///
     void WakeOne(std::atomic<int> *state)
     {
         ::WakeByAddressSingle(state);

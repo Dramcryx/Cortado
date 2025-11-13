@@ -27,6 +27,9 @@ namespace Cortado::Common
 class LinuxEvent : public EventBase<LinuxEvent>
 {
 public:
+    /// @brief EventBase contract: wake all futex waiters.
+    /// @param state Futex address
+    ///
     void WakeAll(std::atomic<int> *state)
     {
         syscall(SYS_futex,
@@ -38,7 +41,12 @@ public:
                 0);
     }
 
-    bool WaitUntil(std::atomic<int> *state, uint64_t timeoutNs)
+    /// @brief EventBase contract: wait futex with given timeout
+    /// @param state Futex address
+    /// @param timeoutNs Timeout to wait in nanoseconds
+    /// @returns true if event was set, false otherwise
+    ///
+    bool WaitForImpl(std::atomic<int> *state, uint64_t timeoutNs)
     {
         int expected = 0;
 

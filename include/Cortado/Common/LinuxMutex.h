@@ -27,6 +27,9 @@ namespace Cortado::Common
 class LinuxMutex : public MutexBase<LinuxMutex>
 {
 public:
+    /// @brief MutexBase contract: wait futex
+    /// @param state Futex to wait
+    ///
     void WaitOnAddress(std::atomic<int> *state)
     {
         int expected = 1;
@@ -39,6 +42,9 @@ public:
                 0);
     }
 
+    /// @brief MutexBase contract: wake futex waiter
+    /// @param state Futex to wake
+    ///
     void WakeOne(std::atomic<int> *state)
     {
         syscall(SYS_futex,

@@ -63,7 +63,8 @@ public:
     {
         while (!IsSet())
         {
-            static_cast<EventImplT *>(this)->WaitUntil(&m_state, UINT64_MAX);
+            static_cast<EventImplT *>(this)->WaitForImpl(&m_state,
+                                                         UINT64_MAX);
         }
     }
 
@@ -83,8 +84,8 @@ public:
                 return true;
             }
 
-            if (!static_cast<EventImplT *>(this)->WaitUntil(&m_state,
-                                                            deadlineNs))
+            if (!static_cast<EventImplT *>(this)->WaitForImpl(&m_state,
+                                                              deadlineNs))
             {
                 return false; // timed out
             }

@@ -23,6 +23,9 @@ namespace Cortado::Common
 class MacOSEvent : public EventBase<MacOSEvent>
 {
 public:
+    /// @brief EventBase contract: wake all futex waiters.
+    /// @param state Futex address
+    ///
     void WakeAll(std::atomic<int> *state)
     {
         os_sync_wake_by_address_all(state,
@@ -30,7 +33,12 @@ public:
                                     OS_SYNC_WAKE_BY_ADDRESS_NONE);
     }
 
-    bool WaitUntil(std::atomic<int> *state, uint64_t timeoutNs)
+    /// @brief EventBase contract: wait futex with given timeout
+    /// @param state Futex address
+    /// @param timeoutNs Timeout to wait in nanoseconds
+    /// @returns true if event was set, false otherwise
+    ///
+    bool WaitForImpl(std::atomic<int> *state, uint64_t timeoutNs)
     {
         int expected = 0;
 
