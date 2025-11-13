@@ -24,15 +24,15 @@ namespace Cortado::Common
 class Win32Mutex : public MutexBase<Win32Mutex>
 {
 public:
-    void WaitOnAddress(std::atomic<int>* state)
+    void WaitOnAddress(std::atomic<int> *state)
     {
         int expected = 1;
-        WaitOnAddress(state, &expected, sizeof(expected), INFINITE);
+        ::WaitOnAddress(state, &expected, sizeof(expected), INFINITE);
     }
 
-    void WakeOne(std::atomic<int>* state)
+    void WakeOne(std::atomic<int> *state)
     {
-        WakeByAddressSingle(state);
+        ::WakeByAddressSingle(state);
     }
 };
 

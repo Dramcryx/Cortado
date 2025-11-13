@@ -43,9 +43,9 @@ TEST(DefaultEventTests, BasicConcurrency)
 
     event.Set();
 
-    ASSERT_TRUE(backgroundTask.WaitFor(5000)) << "Background task must finish";
+    EXPECT_TRUE(backgroundTask.WaitFor(5000)) << "Background task must finish";
 
-    ASSERT_EQ(1, value);
+    EXPECT_EQ(1, value);
 }
 
 TEST(DefaultEventTests, StrongerConcurrency)
@@ -84,7 +84,7 @@ TEST(DefaultEventTests, StrongerConcurrency)
                                         tasks[4],
                                         tasks[5]);
 
-    ASSERT_TRUE(whenAllTask.WaitFor(1000)) << "Background tasks must finish";
+    EXPECT_TRUE(whenAllTask.WaitFor(1000)) << "Background tasks must finish";
 
-    ASSERT_EQ(1, value);
+    EXPECT_EQ(1, value);
 }

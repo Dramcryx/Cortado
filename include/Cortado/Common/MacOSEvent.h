@@ -23,28 +23,32 @@ namespace Cortado::Common
 class MacOSEvent : public EventBase<MacOSEvent>
 {
 public:
-    void WakeAll(std::atomic<int>* state)
+    void WakeAll(std::atomic<int> *state)
     {
-        os_sync_wake_by_address_all(state, sizeof(*state), OS_SYNC_WAKE_BY_ADDRESS_NONE);
+        os_sync_wake_by_address_all(state,
+                                    sizeof(*state),
+                                    OS_SYNC_WAKE_BY_ADDRESS_NONE);
     }
 
-    bool WaitUntil(std::atomic<int>* state, uint64_t timeoutNs)
+    bool WaitUntil(std::atomic<int> *state, uint64_t timeoutNs)
     {
         int expected = 0;
 
         if (timeoutNs == UINT64_MAX)
         {
-            os_sync_wait_on_address(&state, expected, sizeof(expected),
+            os_sync_wait_on_address(state,
+                                    expected,
+                                    sizeof(expected),
                                     OS_SYNC_WAIT_ON_ADDRESS_NONE);
         }
         else
         {
             os_sync_wait_on_address_with_timeout(state,
-                                           expected,
-                                           sizeof(expected),
-                                           OS_SYNC_WAIT_ON_ADDRESS_NONE,
-                                           OS_CLOCK_MACH_ABSOLUTE_TIME,
-                                           timeoutNs);
+                                                 expected,
+                                                 sizeof(expected),
+                                                 OS_SYNC_WAIT_ON_ADDRESS_NONE,
+                                                 OS_CLOCK_MACH_ABSOLUTE_TIME,
+                                                 timeoutNs);
         }
 
         return EventBase<MacOSEvent>::IsSet();

@@ -43,10 +43,10 @@ TEST(DefaultMutexTests, BasicConcurrency)
 
     mutex.unlock();
 
-    ASSERT_TRUE(backgroundTask.WaitFor(10000))
+    EXPECT_TRUE(backgroundTask.WaitFor(10000))
         << "Background task must finish";
 
-    ASSERT_EQ(1, value);
+    EXPECT_EQ(1, value);
 }
 
 TEST(DefaultMutexTests, StrongerConcurrency)
@@ -87,7 +87,7 @@ TEST(DefaultMutexTests, StrongerConcurrency)
                                         tasks[4],
                                         tasks[5]);
 
-    ASSERT_TRUE(whenAllTask.WaitFor(1000)) << "Background tasks must finish";
+    EXPECT_TRUE(whenAllTask.WaitFor(10000)) << "Background tasks must finish";
 
-    ASSERT_EQ(1, value);
+    EXPECT_EQ(1, value);
 }

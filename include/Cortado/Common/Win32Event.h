@@ -24,20 +24,21 @@ namespace Cortado::Common
 class Win32Event : public EventBase<Win32Event>
 {
 public:
-    void WakeAll(std::atomic<int>* state)
+    void WakeAll(std::atomic<int> *state)
     {
-        WakeByAddressAll(state);
+        ::WakeByAddressAll(state);
     }
 
-    bool WaitUntil(std::atomic<int>* state, uint64_t timeoutNs)
+    bool WaitUntil(std::atomic<int> *state, uint64_t timeoutNs)
     {
         int expected = 0;
 
         DWORD timeoutMs = (timeoutNs == UINT64_MAX)
-                         ? INFINITE
-                         : static_cast<DWORD>(timeoutMs / 1'000'000ULL);
+                              ? INFINITE
+                              : static_cast<DWORD>(timeoutNs / 1'000'000ULL);
 
-        BOOL ok = WaitOnAddress(state, &expected, sizeof(expected), timeoutMs);
+        BOOL ok =
+            ::WaitOnAddress(state, &expected, sizeof(expected), timeoutMs);
 
         return ok != 0 || GetLastError() == ERROR_SUCCESS;
     }

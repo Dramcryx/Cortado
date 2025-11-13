@@ -27,17 +27,27 @@ namespace Cortado::Common
 class LinuxMutex : public MutexBase<LinuxMutex>
 {
 public:
-    void WaitOnAddress(std::atomic<int>* state)
+    void WaitOnAddress(std::atomic<int> *state)
     {
         int expected = 1;
-        syscall(SYS_futex, reinterpret_cast<int*>(state),
-                FUTEX_WAIT, expected, nullptr, nullptr, 0);
+        syscall(SYS_futex,
+                reinterpret_cast<int *>(state),
+                FUTEX_WAIT,
+                expected,
+                nullptr,
+                nullptr,
+                0);
     }
 
-    void WakeOne(std::atomic<int>* state)
+    void WakeOne(std::atomic<int> *state)
     {
-        syscall(SYS_futex, reinterpret_cast<int*>(state),
-                FUTEX_WAKE, 1, nullptr, nullptr, 0);
+        syscall(SYS_futex,
+                reinterpret_cast<int *>(state),
+                FUTEX_WAKE,
+                1,
+                nullptr,
+                nullptr,
+                0);
     }
 };
 

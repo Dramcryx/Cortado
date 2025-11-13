@@ -10,7 +10,6 @@
 
 // STL
 //
-#include <stdexcept>
 #include <thread>
 
 template <typename T>

@@ -48,7 +48,9 @@ public:
 
         // Fast path
         //
-        if (m_state.compare_exchange_strong(expected, 1, std::memory_order_acquire))
+        if (m_state.compare_exchange_strong(expected,
+                                            1,
+                                            std::memory_order_acquire))
         {
             return;
         }
@@ -58,12 +60,14 @@ public:
         {
             expected = 0;
 
-            if (m_state.compare_exchange_strong(expected, 1, std::memory_order_acquire))
+            if (m_state.compare_exchange_strong(expected,
+                                                1,
+                                                std::memory_order_acquire))
             {
                 return;
             }
 
-            static_cast<MutexImplT*>(this)->WaitOnAddress(&m_state);
+            static_cast<MutexImplT *>(this)->WaitOnAddress(&m_state);
         }
     }
 
@@ -72,7 +76,9 @@ public:
     bool try_lock() noexcept
     {
         int expected = 0;
-        return m_state.compare_exchange_strong(expected, 1, std::memory_order_acquire);
+        return m_state.compare_exchange_strong(expected,
+                                               1,
+                                               std::memory_order_acquire);
     }
 
     /// @brief Concept contract: Unlock mutex and wake one waiter if any.
@@ -80,11 +86,11 @@ public:
     void unlock() noexcept
     {
         m_state.store(0, std::memory_order_release);
-        static_cast<MutexImplT*>(this)->WakeOne(&m_state);
+        static_cast<MutexImplT *>(this)->WakeOne(&m_state);
     }
 
 private:
-    std::atomic<int> m_state {0};
+    std::atomic<int> m_state{0};
 };
 
 } // namespace Cortado::Common

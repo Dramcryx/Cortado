@@ -54,7 +54,7 @@ public:
     void Set() noexcept
     {
         m_state.store(1, std::memory_order_release);
-        static_cast<EventImplT*>(this)->WakeAll(&m_state);
+        static_cast<EventImplT *>(this)->WakeAll(&m_state);
     }
 
     /// @brief Concept contract: Wait for event to be set.
@@ -63,7 +63,7 @@ public:
     {
         while (!IsSet())
         {
-            static_cast<EventImplT*>(this)->WaitUntil(&m_state, UINT64_MAX);
+            static_cast<EventImplT *>(this)->WaitUntil(&m_state, UINT64_MAX);
         }
     }
 
@@ -73,7 +73,8 @@ public:
     ///
     bool WaitFor(unsigned timeout_ms) noexcept
     {
-        const uint64_t deadlineNs = static_cast<uint64_t>(timeout_ms) * 1'000'000ULL;
+        const uint64_t deadlineNs =
+            static_cast<uint64_t>(timeout_ms) * 1'000'000ULL;
 
         for (;;)
         {
@@ -82,7 +83,8 @@ public:
                 return true;
             }
 
-            if (!static_cast<EventImplT*>(this)->WaitUntil(&m_state, deadlineNs))
+            if (!static_cast<EventImplT *>(this)->WaitUntil(&m_state,
+                                                            deadlineNs))
             {
                 return false; // timed out
             }
@@ -90,7 +92,7 @@ public:
     }
 
 private:
-    std::atomic<int> m_state {0};
+    std::atomic<int> m_state{0};
 };
 
 } // namespace Cortado::Common
