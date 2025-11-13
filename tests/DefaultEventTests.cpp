@@ -30,6 +30,8 @@ TEST(DefaultEventTests, BasicConcurrency)
 
     int value = 1;
 
+    ASSERT_FALSE(event.IsSet());
+
     auto backgroundTask = [&]() -> Cortado::Task<void>
     {
         co_await Cortado::ResumeBackground();
@@ -41,7 +43,7 @@ TEST(DefaultEventTests, BasicConcurrency)
 
     event.Set();
 
-    ASSERT_TRUE(backgroundTask.WaitFor(1000)) << "Background task must finish";
+    ASSERT_TRUE(backgroundTask.WaitFor(5000)) << "Background task must finish";
 
     ASSERT_EQ(1, value);
 }

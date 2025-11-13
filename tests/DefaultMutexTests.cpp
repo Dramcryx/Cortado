@@ -30,6 +30,8 @@ TEST(DefaultMutexTests, BasicConcurrency)
 
     mutex.lock();
 
+    ASSERT_FALSE(mutex.try_lock());
+
     auto backgroundTask = [&]() -> Cortado::Task<void>
     {
         co_await Cortado::ResumeBackground();
@@ -41,7 +43,7 @@ TEST(DefaultMutexTests, BasicConcurrency)
 
     mutex.unlock();
 
-    ASSERT_TRUE(backgroundTask.WaitFor(1000))
+    ASSERT_TRUE(backgroundTask.WaitFor(10000))
         << "Background task must finish";
 
     ASSERT_EQ(1, value);

@@ -79,12 +79,22 @@ public:
             struct timespec ts;
             clock_gettime(CLOCK_REALTIME, &ts);
 
+            // Avoid overflow when wait is longer that 1s
+            //
+            if (timeToWaitMs > 1000)
+            {
+                ts.tv_sec += timeToWaitMs / 1000;
+                timeToWaitMs %= 1000;
+            }
+
             ts.tv_nsec += timeToWaitMs * 1000000;
 
-            if (ts.tv_nsec >= 1000000000)
+            // Avoid overflow for nanoseconds
+            //
+            if (ts.tv_nsec >= 1000000000L)
             {
-                ts.tv_nsec -= 1000000000;
-                ts.tv_sec += 1;
+                ts.tv_sec++;
+                ts.tv_nsec -= 1000000000L;
             }
 
             PthreadAutoLock autoLock{&m_mutex};
