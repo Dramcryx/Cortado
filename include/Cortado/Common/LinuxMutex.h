@@ -2,10 +2,12 @@
 /// Futex-based implementation of mutex.
 ///
 
-// STL
+#ifndef CORTADO_COMMON_LINUX_MUTEX_H
+#define CORTADO_COMMON_LINUX_MUTEX_H
+
+// Cortado
 //
-#include <atomic>
-#include <cerrno>
+#include <Cortado/Common/MutexBase.h>
 
 // Linux
 //
@@ -13,119 +15,29 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#ifndef CORTADO_COMMON_LINUX_MUTEX_H
-#define CORTADO_COMMON_LINUX_MUTEX_H
+// STL
+//
+#include <cerrno>
 
 namespace Cortado::Common
 {
 
 /// @brief Implementation using futex.
 ///
-class LinuxMutex
+class LinuxMutex : public MutexBase<LinuxMutex>
 {
 public:
-    /// @brief Constructor.
-    ///
-    LinuxMutex() = default;
-
-    /// @brief Non-copyable.
-    ///
-    LinuxMutex(const LinuxMutex &) = delete;
-
-    /// @brief Non-copyable.
-    ///
-    LinuxMutex &operator=(const LinuxMutex &) = delete;
-
-    /// @brief Non-movable.
-    ///
-    LinuxMutex(LinuxMutex &&) = delete;
-
-    /// @brief Non-movable.
-    ///
-    LinuxMutex &operator=(LinuxMutex &&) = delete;
-
-    /// @brief Destructor.
-    ///
-    ~LinuxMutex() = default;
-
-    /// @brief Concept contract: Lock mutex, waiting if needed.
-    ///
-    void lock() noexcept
+    void WaitOnAddress(std::atomic<int>* state)
     {
-        int expected = 0;
-        // Fast path: try to acquire
-        if (m_state.compare_exchange_strong(expected,
-                                            1,
-                                            std::memory_order_acquire,
-                                            std::memory_order_relaxed))
-        {
-            return;
-        }
-
-        // Slow path: contention
-        while (true)
-        {
-            expected = 0;
-            if (m_state.compare_exchange_strong(expected,
-                                                1,
-                                                std::memory_order_acquire,
-                                                std::memory_order_relaxed))
-            {
-                return; // acquired
-            }
-            futex_wait();
-        }
+        int expected = 1;
+        syscall(SYS_futex, reinterpret_cast<int*>(state),
+                FUTEX_WAIT, expected, nullptr, nullptr, 0);
     }
 
-    /// @brief Concept contract: Try locking mutex without waiting.
-    ///
-    bool try_lock() noexcept
+    void WakeOne(std::atomic<int>* state)
     {
-        int expected = 0;
-        return m_state.compare_exchange_strong(expected,
-                                               1,
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed);
-    }
-
-    /// @brief Concept contract: Unlock mutex and wake one waiter if any.
-    ///
-    void unlock() noexcept
-    {
-        m_state.store(0, std::memory_order_release);
-        futex_wake();
-    }
-
-private:
-    std::atomic<int> m_state{0};
-
-    void futex_wait() noexcept
-    {
-        int one = 1;
-        // Wait while *m_state == 1
-        int res = syscall(SYS_futex,
-                          reinterpret_cast<int *>(&m_state),
-                          FUTEX_WAIT_PRIVATE,
-                          one,
-                          nullptr,
-                          nullptr,
-                          0);
-
-        if (res == -1 && errno != EAGAIN && errno != EINTR)
-        {
-            std::abort();
-        }
-    }
-
-    void futex_wake() noexcept
-    {
-        syscall(SYS_futex,
-                reinterpret_cast<int *>(&m_state),
-                FUTEX_WAKE_PRIVATE,
-                1,
-                nullptr,
-                nullptr,
-                0);
+        syscall(SYS_futex, reinterpret_cast<int*>(state),
+                FUTEX_WAKE, 1, nullptr, nullptr, 0);
     }
 };
 

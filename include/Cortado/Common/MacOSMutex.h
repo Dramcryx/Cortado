@@ -5,7 +5,12 @@
 #ifndef CORTADO_COMMON_MACOS_MUTEX_H
 #define CORTADO_COMMON_MACOS_MUTEX_H
 
+#include <cstdint>
 #ifdef __APPLE__
+
+// Cortado
+//
+#include <Cortado/Common/MutexBase.h>
 
 // macOS
 //
@@ -91,97 +96,22 @@ namespace V2
 /// @brief Implementation that uses os_sync_wake_by_address_any,
 /// which in some case should be quicker.
 ///
-class MacOSMutex
+class MacOSMutex : public MutexBase<MacOSMutex>
 {
 public:
-    /// @brief Constructor.
-    ///
-    MacOSMutex() = default;
-
-    /// @brief Non-copyable.
-    ///
-    MacOSMutex(const MacOSMutex &) = delete;
-
-    /// @brief Non-copyable.
-    ///
-    MacOSMutex &operator=(const MacOSMutex &) = delete;
-
-    /// @brief Non-movable.
-    ///
-    MacOSMutex(MacOSMutex &&) = delete;
-
-    /// @brief Non-movable.
-    ///
-    MacOSMutex &operator=(MacOSMutex &&) = delete;
-
-    /// @brief Destructor.
-    ///
-    ~MacOSMutex() = default;
-
-    /// @brief Concept contract: Lock mutex, waiting if needed.
-    ///
-    void lock() noexcept
+    void WaitOnAddress(std::atomic<int>* state)
     {
-        unsigned long long expected = 0;
-        // fast path: try without blocking
-        if (m_state.compare_exchange_strong(expected,
-                                            1,
-                                            std::memory_order_acquire,
-                                            std::memory_order_relaxed))
-        {
-            return;
-        }
-
-        // otherwise, contended — spin a little (optional), then wait
-        while (true)
-        {
-            expected = 0;
-            // if lock becomes free
-            if (m_state.load(std::memory_order_relaxed) == 0)
-            {
-                if (m_state.compare_exchange_strong(expected,
-                                                    1,
-                                                    std::memory_order_acquire,
-                                                    std::memory_order_relaxed))
-                {
-                    return;
-                }
-                // else something else acquired, continue
-            }
-            // Wait: block if state_ is 1
-            os_sync_wait_on_address(&m_state,
-                                    (uint64_t)1,
-                                    sizeof(m_state),
-                                    OS_SYNC_WAIT_ON_ADDRESS_NONE);
-            // After waking, loop to try again
-        }
+        uint64_t expected = 1;
+        os_sync_wait_on_address(state, expected, sizeof(expected),
+                                OS_SYNC_WAIT_ON_ADDRESS_NONE);
     }
 
-    /// @brief Concept contract: Try locking mutex without waiting.
-    ///
-    bool try_lock() noexcept
+    void WakeOne(std::atomic<int>* state)
     {
-        uint64_t expected = 0;
-        return m_state.compare_exchange_strong(expected,
-                                               1,
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed);
-    }
-
-    /// @brief Concept contract: Unlock mutex, waking one waiter if any.
-    ///
-    void unlock() noexcept
-    {
-        // store zero
-        m_state.store(0, std::memory_order_release);
-        // wake one waiting thread
-        os_sync_wake_by_address_any(&m_state,
-                                    sizeof(m_state),
+        os_sync_wake_by_address_any(state,
+                                    sizeof(*state),
                                     OS_SYNC_WAKE_BY_ADDRESS_NONE);
     }
-
-private:
-    std::atomic<uint64_t> m_state{0};
 };
 
 } // namespace V2

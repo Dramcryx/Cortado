@@ -16,15 +16,26 @@ namespace Cortado
 using DefaultEvent = Cortado::Common::Win32Event;
 } // namespace Cortado
 
-#elif defined(_POSIX_VERSION) || defined(__APPLE__)
+#elif defined(__APPLE__)
 
 // Cortado
 //
-#include <Cortado/Common/PosixEvent.h>
+#include <Cortado/Common/MacOSEvent.h>
 
 namespace Cortado
 {
-using DefaultEvent = Cortado::Common::PosixEvent;
+using DefaultEvent = Cortado::Common::MacOSEvent;
+} // namespace Cortado
+
+#elif defined(__linux__)
+
+// Cortado
+//
+#include <Cortado/Common/LinuxEvent.h>
+
+namespace Cortado
+{
+using DefaultEvent = Cortado::Common::LinuxEvent;
 } // namespace Cortado
 
 #else

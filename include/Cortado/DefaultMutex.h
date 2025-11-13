@@ -27,7 +27,7 @@ namespace Cortado
 using DefaultMutex = Cortado::Common::Win32Mutex;
 } // namespace Cortado
 
-#else
+#elif defined(__linux__)
 
 // Cortado
 //
