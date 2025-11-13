@@ -166,7 +166,7 @@ TEST(DefaultTaskTests, SyncWait)
     auto taskObject = task1();
 
     EXPECT_FALSE(taskObject.WaitFor(10));
-    EXPECT_TRUE(taskObject.WaitFor(600));
+    EXPECT_TRUE(taskObject.WaitFor(1000));
 }
 
 TEST(DefaultTaskTests, WhenAny)

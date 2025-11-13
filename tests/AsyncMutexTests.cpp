@@ -15,7 +15,7 @@ using Task = Cortado::Task<T>;
 
 using AsyncMutex = Cortado::AsyncMutex<std::atomic_int64_t, Cortado::DefaultMutex>;
 
-TEST(AsyncMutexTests, DISABLED_BasicLockUnlock)
+TEST(AsyncMutexTests, BasicLockUnlock)
 {
     AsyncMutex mutex;
 
@@ -47,7 +47,7 @@ TEST(AsyncMutexTests, DISABLED_BasicLockUnlock)
     EXPECT_TRUE(taskObject.IsReady());
 }
 
-TEST(AsyncMutexTests, DISABLED_BasicConcurrency)
+TEST(AsyncMutexTests, BasicConcurrency)
 {
     constexpr std::size_t ConcurrencyCount = 4;
 
@@ -103,7 +103,7 @@ TEST(AsyncMutexTests, DISABLED_BasicConcurrency)
 
     AsyncMutex mutex;
 
-    auto mainTask = [&]() -> Task<>
+    auto mainTaskLambda = [&]() -> Task<>
     {
         using namespace Cortado;
         // Lock mutex from backgound
@@ -119,7 +119,9 @@ TEST(AsyncMutexTests, DISABLED_BasicConcurrency)
         //
         unlockLatch.Wait();
         mutex.Unlock();
-    }();
+    };
+
+    auto mainTask = mainTaskLambda();
 
     ASSERT_TRUE(lockLatch.WaitFor(1000))
         << "mainTask should have locked the mutex";

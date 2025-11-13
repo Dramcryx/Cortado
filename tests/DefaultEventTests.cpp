@@ -32,12 +32,14 @@ TEST(DefaultEventTests, BasicConcurrency)
 
     ASSERT_FALSE(event.IsSet());
 
-    auto backgroundTask = [&]() -> Cortado::Task<void>
+    auto backgroundTaskLambda = [&]() -> Cortado::Task<void>
     {
         co_await Cortado::ResumeBackground();
         event.WaitFor(5000);
         value /= 2;
-    }();
+    };
+
+    auto backgroundTask = backgroundTaskLambda();
 
     value *= 2;
 

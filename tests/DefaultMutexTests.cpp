@@ -32,12 +32,14 @@ TEST(DefaultMutexTests, BasicConcurrency)
 
     ASSERT_FALSE(mutex.try_lock());
 
-    auto backgroundTask = [&]() -> Cortado::Task<void>
+    auto backgroundTaskLabmda = [&]() -> Cortado::Task<void>
     {
         co_await Cortado::ResumeBackground();
         std::lock_guard lk{mutex};
         value /= 2;
-    }();
+    };
+
+    auto backgroundTask = backgroundTaskLabmda();
 
     value *= 2;
 
@@ -57,27 +59,27 @@ TEST(DefaultMutexTests, StrongerConcurrency)
 
     mutex.lock();
 
-    auto multiplierTask = [&]() -> Cortado::Task<void>
+    auto incrementTask = [&]() -> Cortado::Task<void>
     {
         co_await Cortado::ResumeBackground();
         std::lock_guard lk{mutex};
-        value *= 2;
+        ++value;
     };
 
-    auto dividerTask = [&]() -> Cortado::Task<void>
+    auto decrementTask = [&]() -> Cortado::Task<void>
     {
         co_await Cortado::ResumeBackground();
         std::lock_guard lk{mutex};
-        value /= 2;
+        --value;
     };
 
-    Cortado::Task<void> tasks[]{multiplierTask(),
-                                dividerTask(),
-                                multiplierTask(),
-                                dividerTask(),
-                                multiplierTask(),
-                                dividerTask()};
-    
+    Cortado::Task<void> tasks[]{incrementTask(),
+                                decrementTask(),
+                                incrementTask(),
+                                decrementTask(),
+                                incrementTask(),
+                                decrementTask()};
+
     mutex.unlock();
 
     auto whenAllTask = Cortado::WhenAll(tasks[0],
