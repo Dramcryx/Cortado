@@ -128,6 +128,13 @@ using Task = Cortado::Task<T, SillyTaskImpl>;
 
 Getting started
 ---------------
+To test the default implementation, it is required to run a platform with futex support. Fallback to kernel-mode primitives is TODO.
+
+These systems include:
+1) Windows 8+/Windows Server 2012+
+2) macOS 14.4+
+3) Linux with kernel 2.5.7+ (futex2 is also TODO)
+
 CMake on any platform
 ---------------
 If your project supports CMake, the best way it to do the same way as Google Test:
@@ -150,13 +157,21 @@ Debian package (Debian, Ubuntu, Linux Mint etc.)
 ---------------
 Download a deb package from releases: https://github.com/Dramcryx/Cortado/releases, then from terminal:
 ```
-sudo dpkg -i Cortado-0.1.5.deb
+sudo dpkg -i Cortado-0.3.0.deb
 ```
 
 RPM package (Fedora)
 ---------------
+To be packed automatically. You can pack RPM manually using CPack:
 ```
-sudo rpm -i Cortado-0.1.5.rpm
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local/
+
+cpack -G RPM ./build/CPackConfig.cmake
+```
+This will generate a file named Cortado-0.3.0.rpm.
+Next, run rpm installation:
+```
+sudo rpm -i Cortado-0.3.0.rpm
 ```
 
 NuGet package
@@ -165,11 +180,13 @@ In Visual Sutdio with your project open right-click on project -> `Manage NuGet 
 
 Roadmap & TODO
 --------------
+- Async event
 - Proper packaging and releases.
 - Better documentation and examples (including integration with various schedulers).
 - Cancellation support.
 - Fuzzer and tests.
 - Stack tracing support (Natvis scripts, gdb/lldb helpers).
+- Wider default implementation support - fallback to non-futex runtimes, futex2 for newer Linux
 
 Contributing
 ------------
