@@ -1,10 +1,17 @@
-add_executable(example example/example.h example/example.cpp)
+add_executable(example examples/example.h examples/example.cpp)
 
 target_include_directories(example PRIVATE ./include)
+
+add_executable(ExampleCustomAllocator examples/example.h examples/ExampleCustomAllocator.cpp)
+
+target_include_directories(ExampleCustomAllocator PRIVATE ./include)
 
 if (WIN32)
   target_compile_definitions(example PRIVATE _AMD64_ _UNICODE)
   target_link_libraries(example PRIVATE Synchronization.lib)
+
+  target_compile_definitions(ExampleCustomAllocator PRIVATE _AMD64_ _UNICODE)
+  target_link_libraries(ExampleCustomAllocator PRIVATE Synchronization.lib)
 endif()
 
 option(ASAN "Build with address sanitizer" OFF)
@@ -18,14 +25,21 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
 
   if (ASAN)
     message(STATUS "Building with -fsanitize=address")
+
     target_compile_options(example PRIVATE -fsanitize=address)
     target_link_options(example PRIVATE -fsanitize=address)
+
+    target_compile_options(ExampleCustomAllocator PRIVATE -fsanitize=address)
+    target_link_options(ExampleCustomAllocator PRIVATE -fsanitize=address)
   endif()
 
   if (TSAN)
     message(STATUS "Building with -fsanitize=thread")
     target_compile_options(example PRIVATE -fsanitize=thread)
     target_link_options(example PRIVATE -fsanitize=thread)
+
+    target_compile_options(ExampleCustomAllocator PRIVATE -fsanitize=address)
+    target_link_options(ExampleCustomAllocator PRIVATE -fsanitize=address)
   endif()
 else()
   message(STATUS ${CMAKE_CXX_COMPILER_ID})

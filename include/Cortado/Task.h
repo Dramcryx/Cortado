@@ -38,7 +38,15 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     template <typename... Args>
     static void *operator new(std::size_t size, Allocator a, Args &...)
     {
-        return a.allocate(size);
+        constexpr std::size_t allocatorSize = sizeof(Allocator) > 8ul ? sizeof(Allocator) : 8ul;
+
+        std::size_t realSize = size + allocatorSize;
+
+        void* wholeMemory =  a.allocate(realSize);
+
+        Allocator* allocPtr = new (wholeMemory) Allocator{std::move(a)};
+
+        return reinterpret_cast<std::byte*>(allocPtr) + allocatorSize;
     }
 
     /// @brief Compiler contract: Defining `new` that uses custom allocator for
@@ -59,6 +67,21 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
         requires std::is_default_constructible_v<Allocator>
     {
         return operator new(size, Allocator{});
+    }
+
+    static void operator delete(void* ptr, std::size_t size) noexcept
+    {
+        constexpr std::size_t allocatorSize = sizeof(Allocator) > 8ul ? sizeof(Allocator) : 8ul;
+
+        std::size_t realSize = size + allocatorSize;
+
+        std::byte* allocAddress = reinterpret_cast<std::byte*>(ptr) - allocatorSize;
+
+        Allocator* alloc = reinterpret_cast<Allocator*>(allocAddress);
+
+        auto allocator = std::move(*alloc);
+
+        allocator.deallocate(allocAddress, size + allocatorSize);
     }
 
     /// @brief Compiler contract: First suspension point return value.

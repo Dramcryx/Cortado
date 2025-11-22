@@ -44,7 +44,7 @@ else()
 endif()
 
 # Native examples
-include(example/CMakeLists.txt)
+include(examples/CMakeLists.txt)
 
 # Doxygen generator
 include(doc/CMakeLists.txt)

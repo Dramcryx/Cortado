@@ -1,5 +1,5 @@
 /// @file example.h
-/// Platform-based definition of NativeMutexT and thread ID function.
+/// Platform-based definition of thread ID function.
 ///
 
 #ifndef CORTADO_EXAMPLE_EXAMPLE_H

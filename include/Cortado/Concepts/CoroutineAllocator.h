@@ -18,6 +18,7 @@ namespace Cortado::Concepts
 template <typename T>
 concept CoroutineAllocator = requires(T t, void *p, std::size_t s) {
     { t.allocate(s) } -> std::same_as<void *>;
+    { t.deallocate(p, s) } -> std::same_as<void>;
 };
 
 /// @brief Helper concept to define if T defines
