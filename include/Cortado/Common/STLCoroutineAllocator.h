@@ -24,6 +24,13 @@ struct STLAllocator
     {
         return m_allocator.allocate(size);
     }
+
+    /// @brief Concept contract: Deallocates requested pointer.
+    ///
+    void deallocate(void* ptr, std::size_t size)
+    {
+        m_allocator.deallocate(reinterpret_cast<std::byte*>(ptr), size);
+    }
 };
 
 /// @brief Struct that defines allocator type used for task implementation.

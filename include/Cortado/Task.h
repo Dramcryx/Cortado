@@ -34,22 +34,38 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     PromiseType() = default;
 
     /// @brief Compiler contract: Defining `new` that uses custom allocator.
+    /// We will allocate extra space before the aligned frame to store the
+    /// allocator instance which will be used during deallocation.
     ///
     template <typename... Args>
-    static void *operator new(std::size_t size, Allocator a, Args &...)
+    static void *operator new(std::size_t size, Allocator a, Args &&...)
     {
-        return a.allocate(size);
+        // Total allocation size includes:
+        // --------------------------------------
+        // | Allocator instance | Aligned frame |
+        // --------------------------------------
+        //
+        const std::size_t totalAllocationSize =
+            AllocatorSizeAlignedByPromise() + size;
+
+        void *rawPtr = a.allocate(totalAllocationSize);
+
+        ::new (rawPtr) Allocator{a};
+
+        std::byte *rawMemory = static_cast<std::byte *>(rawPtr);
+
+        return rawMemory += AllocatorSizeAlignedByPromise();
     }
 
     /// @brief Compiler contract: Defining `new` that uses custom allocator for
     /// methods.
     ///
     template <typename Class, typename... Args>
-    static void *operator new(std::size_t size, Class &, Allocator a, Args &...)
+    static void *operator new(std::size_t size, Class &, Allocator a, Args &&...)
         requires(
             !std::convertible_to<std::remove_cvref_t<Class> &, Allocator &>)
     {
-        return operator new(size, a);
+        return operator new(size, std::forward<Allocator>(a));
     }
 
     /// @brief Compiler contract: Defining `new` that uses custom allocator
@@ -59,6 +75,34 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
         requires std::is_default_constructible_v<Allocator>
     {
         return operator new(size, Allocator{});
+    }
+
+    /// @brief Compiler contract: Defining `delete` that uses custom allocator.
+    ///
+    static void operator delete(void* ptr, std::size_t size) noexcept
+    {
+        std::byte* rawMemory = static_cast<std::byte*>(ptr);
+
+        // Offset back to allocator storage
+        //
+        rawMemory -= AllocatorSizeAlignedByPromise();
+
+        // Cast to allocator pointer
+        //
+        Allocator* allocatorPtr = reinterpret_cast<Allocator*>(rawMemory);
+
+        // Move allocator as we are going to destroy its storage
+        //
+        Allocator allocator = std::move(*allocatorPtr);
+
+        allocatorPtr->~Allocator();
+
+        // Restore total allocation size
+        //
+        const std::size_t totalAllocationSize =
+            AllocatorSizeAlignedByPromise() + size;
+
+        allocator.deallocate(rawMemory, totalAllocationSize);
     }
 
     /// @brief Compiler contract: First suspension point return value.
@@ -73,6 +117,42 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     U &&await_transform(U &&awaitable) noexcept
     {
         return static_cast<U &&>(awaitable);
+    }
+
+private:
+    /// @brief Helper for alignment calculations.
+    /// @returns Alignment of promise type.
+    ///
+    static constexpr std::size_t FrameAlignment()
+    {
+        return alignof(PromiseType);
+    }
+
+    /// @brief Helper for alignment calculations.
+    /// @returns Size of Allocator.
+    ///
+    static constexpr std::size_t AllocatorSize()
+    {
+        return sizeof(Allocator);
+    }
+
+    /// @brief Helper for alignment calculations. Returns the larger alignment.
+    /// @returns Final alignment for allocator.
+    ///
+    static constexpr std::size_t AllocatorAlignment()
+    {
+        return alignof(Allocator) > FrameAlignment() ? alignof(Allocator)
+                                                     : FrameAlignment();
+    }
+
+    /// @brief Helper for alignment calculations.
+    /// Canonical alignment formula to ensure allocator is properly aligned
+    /// @returns Aligned size of Allocator.
+    ///
+    static constexpr std::size_t AllocatorSizeAlignedByPromise()
+    {
+        return (AllocatorSize() + (AllocatorAlignment() - 1)) &
+               ~(AllocatorAlignment() - 1);
     }
 };
 

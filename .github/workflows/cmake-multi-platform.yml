@@ -88,8 +88,13 @@ jobs:
       if: ${{ matrix.cpp_compiler == 'clang++' }}
       run: |
         set -o pipefail
-        TSAN_OPTIONS="suppressions=$(pwd)/macOS-tsan.supp" ./build/example 2>&1 | tee output.log
+        TSAN_OPTIONS="suppressions=$(pwd)/macOS-tsan.supp" ./build/ExampleDefaultTaskImpl 2>&1 | tee output.log
         if grep -qE "WARNING|ThreadSanitizer" output.log; then
-          echo "❌ Found warnings in output"
+          echo "❌ Found warnings in output of ExampleDefaultTaskImpl"
+          exit 1
+        fi
+        TSAN_OPTIONS="suppressions=$(pwd)/macOS-tsan.supp" ./build/ExampleCustomAllocator 2>&1 | tee output.log
+        if grep -qE "WARNING|ThreadSanitizer" output.log; then
+          echo "❌ Found warnings in output of ExampleCustomAllocator"
           exit 1
         fi
