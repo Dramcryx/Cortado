@@ -8,58 +8,10 @@
 // Cortado
 //
 #include <Cortado/DefaultEvent.h>
+#include <Cortado/DefaultScheduler.h>
 #include <Cortado/Common/STLAtomic.h>
 #include <Cortado/Common/STLCoroutineAllocator.h>
 #include <Cortado/Common/STLExceptionHandler.h>
-
-#ifdef __APPLE__
-
-// Cortado
-//
-#include <Cortado/Common/MacOSCoroutineScheduler.h>
-
-namespace Cortado
-{
-using DefaultScheduler = Common::MacOSCoroutineScheduler;
-} // namespace Cortado
-
-#elif defined(_WIN32)
-
-// Cortado
-//
-#include <Cortado/Common/Win32CoroutineScheduler.h>
-
-// Win32
-//
-#include <processthreadsapi.h>
-
-namespace Cortado
-{
-using DefaultScheduler = Common::Win32CoroutineScheduler;
-} // namespace Cortado
-
-#elif defined(_POSIX_VERSION)
-
-// Cortado
-//
-#include <Cortado/Common/PosixCoroutineScheduler.h>
-
-namespace Cortado
-{
-using DefaultScheduler = Common::PosixCoroutineScheduler;
-} // namespace Cortado
-
-#else
-
-namespace Cortado
-{
-struct NoScheduler
-{
-};
-using DefaultScheduler = NoScheduler;
-} // namespace Cortado
-
-#endif
 
 namespace Cortado
 {
@@ -68,9 +20,9 @@ namespace Cortado
 /// STL allocator, atomic and exception.
 ///
 struct DefaultTaskImpl :
-    Cortado::Common::STLAtomic,
-    Cortado::Common::STLCoroutineAllocator,
-    Cortado::Common::STLExceptionHandler,
+    Common::STLAtomic,
+    Common::STLCoroutineAllocator,
+    Common::STLExceptionHandler,
     DefaultScheduler
 {
     using Event = DefaultEvent;

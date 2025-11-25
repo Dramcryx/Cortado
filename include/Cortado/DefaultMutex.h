@@ -38,6 +38,17 @@ namespace Cortado
 using DefaultMutex = Cortado::Common::LinuxMutex;
 } // namespace Cortado
 
+
+#else
+
+namespace Cortado
+{
+struct NoMutex
+{
+};
+using DefaultMutex = NoMutex;
+} // namespace Cortado
+
 #endif
 
 #endif // CORTADO_DEFAULT_MUTEX_H

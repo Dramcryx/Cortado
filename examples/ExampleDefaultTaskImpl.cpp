@@ -1,8 +1,8 @@
-/// @file example.cpp
-/// Usage example for Cortado library.
+/// @file ExampleDefaultTaskImpl.cpp
+/// Usage example for Cortado library with default task implementation.
 ///
 
-#include "example.h"
+#include "ExampleDefaultTaskImpl.h"
 
 // Cortado
 //
