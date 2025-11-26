@@ -2,8 +2,6 @@
 /// Usage example for Cortado library with default task implementation.
 ///
 
-#include "ExampleDefaultTaskImpl.h"
-
 // Cortado
 //
 #include <Cortado/AsyncMutex.h>
@@ -15,6 +13,16 @@
 #include <format>
 #include <iostream>
 #include <thread>
+
+#ifdef _WIN32
+
+#define THREAD_ID GetCurrentThreadId()
+
+#else // !_WIN32
+
+#define THREAD_ID ((long)pthread_self())
+
+#endif
 
 using namespace Cortado;
 using namespace Cortado::Common;
