@@ -165,6 +165,11 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     }
 
 private:
+    /// @brief Helper for frame allocation.
+    /// @param size Size of aligned frame requested by compiler.
+    /// @param a Allocator instance to use for allocation.
+    /// @returns Pointer to aligned frame start.
+    ///
     inline static void *AllocateFrame(std::size_t size, Allocator &a)
     {
         // Total allocation size includes:
@@ -178,6 +183,11 @@ private:
         // Allocate full storage size
         //
         void *rawPtr = a.allocate(totalAllocationSize);
+
+        if (rawPtr == nullptr)
+        {
+            return nullptr;
+        }
 
         // Copy-place the allocator
         //

@@ -12,6 +12,7 @@ enable_testing()
 
 add_executable(
     CortadoTests
+    ${CMAKE_CURRENT_LIST_DIR}/CoroutineAllocatorTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskWithAdditionalStorageTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/AsyncMutexTests.cpp
