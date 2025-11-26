@@ -210,10 +210,6 @@ struct ResumeBackgroundAwaiter : AwaiterBase
     /// AwaiterBase state.
     ///
     using Base::await_resume;
-
-private:
-    std::coroutine_handle<> m_handle;
-    Detail::BeforeResumeFuncT m_beforeResumeFunc;
 };
 
 /// @brief co_await shortcut for resuming on a different thread.

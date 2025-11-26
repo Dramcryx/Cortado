@@ -36,48 +36,81 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     /// @brief Compiler contract: Defining `new` that uses custom allocator.
     /// We will allocate extra space before the aligned frame to store the
     /// allocator instance which will be used during deallocation.
+    /// 
+    /// @tparam Alloc This one has to be `Allocator`. A template is used here
+    /// only to enable universal reference. The actual allocator instance is
+    /// always copied inside `AllocateFrame`.
     ///
-    template <typename... Args>
-    static void *operator new(std::size_t size, Allocator a, Args &&...)
+    /// @tparam Args Other coroutine arguments - ignored.
+    ///
+    /// @param size `new` operator contract. Frame size calculated by compiler.
+    /// @param a Allocator to use for frame allocation and deallocation.
+    /// 
+    /// @returns Pointer to coroutine frame start.
+    ///
+    template <Concepts::CoroutineAllocator Alloc, typename... Args>
+    [[nodiscard]] static void *operator new(std::size_t size,
+                                            Alloc &&a,
+                                            [[maybe_unused]] Args &&...)
+        requires(std::is_same_v<std::remove_cvref_t<Alloc>, Allocator>)
     {
-        // Total allocation size includes:
-        // --------------------------------------
-        // | Allocator instance | Aligned frame |
-        // --------------------------------------
-        //
-        const std::size_t totalAllocationSize =
-            AllocatorSizeAlignedByPromise() + size;
-
-        void *rawPtr = a.allocate(totalAllocationSize);
-
-        ::new (rawPtr) Allocator{a};
-
-        std::byte *rawMemory = static_cast<std::byte *>(rawPtr);
-
-        return rawMemory += AllocatorSizeAlignedByPromise();
+        return AllocateFrame(size, a);
     }
 
-    /// @brief Compiler contract: Defining `new` that uses custom allocator for
-    /// methods.
+    /// @brief Compiler contract: Defining `new` that uses custom allocator.
+    /// We will allocate extra space before the aligned frame to store the
+    /// allocator instance which will be used during deallocation.
+    /// This specific overload is designated to class methods (or lambdas).
     ///
-    template <typename Class, typename... Args>
-    static void *operator new(std::size_t size, Class &, Allocator a, Args &&...)
+    /// @tparam Class A class for which consturcted coroutine is a method.
+    ///
+    /// @tparam Alloc This one has to be `Allocator`. A template is used here
+    /// only to enable universal reference. The actual allocator instance is
+    /// always copied inside `AllocateFrame`.
+    ///
+    /// @tparam Args Other coroutine arguments - ignored.
+    /// 
+    /// @param size `new` operator contract. Frame size calculated by compiler.
+    /// @param a Allocator to use for frame allocation and deallocation.
+    /// 
+    /// @returns Pointer to coroutine frame start.
+    ///
+    template <typename Class,
+              Concepts::CoroutineAllocator Alloc,
+              typename... Args>
+    [[nodiscard]] static void *operator new(std::size_t size,
+                                            [[maybe_unused]] Class &,
+                                            Alloc&& a,
+                                            [[maybe_unused]] Args &&...)
         requires(
-            !std::convertible_to<std::remove_cvref_t<Class> &, Allocator &>)
+            !std::convertible_to<std::remove_cvref_t<Class> &, Allocator &> &&
+            std::is_same_v<std::remove_cvref_t<Alloc>, Allocator>)
     {
-        return operator new(size, std::forward<Allocator>(a));
+        return AllocateFrame(size, a);
     }
 
-    /// @brief Compiler contract: Defining `new` that uses custom allocator
-    /// which can be default-constructed.
+    /// @brief Compiler contract: Defining `new` that uses custom allocator.
+    /// We will allocate extra space before the aligned frame to store the
+    /// allocator instance which will be used during deallocation.
+    /// This specific overload is only supported if allocator is not provided
+    /// within coroutine arguments list and if allocator is default-constructible
+    /// (such as std::allocator).
+    /// 
+    /// @param size `new` operator contract. Frame size calculated by compiler.
+    /// 
+    /// @returns Pointer to coroutine frame start.
     ///
-    static void *operator new(std::size_t size)
+    [[nodiscard]] static void *operator new(std::size_t size)
         requires std::is_default_constructible_v<Allocator>
     {
-        return operator new(size, Allocator{});
+        Allocator a;
+        return AllocateFrame(size, a);
     }
 
     /// @brief Compiler contract: Defining `delete` that uses custom allocator.
+    ///
+    /// @param ptr Pointer to coroutine frame start.
+    /// @param size Frame size calculated by compiler.
     ///
     static void operator delete(void* ptr, std::size_t size) noexcept
     {
@@ -91,10 +124,22 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
         //
         Allocator* allocatorPtr = reinterpret_cast<Allocator*>(rawMemory);
 
-        // Move allocator as we are going to destroy its storage
+        // Extract allocator from storage
         //
-        Allocator allocator = std::move(*allocatorPtr);
+        Allocator allocator{[allocatorPtr] ()
+            {
+                if constexpr (std::is_move_constructible_v<Allocator>)
+                {
+                    return std::move(*allocatorPtr);
+                }
+                else
+                {
+                    return *allocatorPtr;
+                }
+            }()};
 
+        // Destroy in-frame stored allocator as we are going to clear out the frame
+        //
         allocatorPtr->~Allocator();
 
         // Restore total allocation size
@@ -120,39 +165,46 @@ struct PromiseType : Detail::CoroutinePromiseBaseWithValue<T, R>
     }
 
 private:
-    /// @brief Helper for alignment calculations.
-    /// @returns Alignment of promise type.
-    ///
-    static constexpr std::size_t FrameAlignment()
+    inline static void *AllocateFrame(std::size_t size, Allocator &a)
     {
-        return alignof(PromiseType);
-    }
+        // Total allocation size includes:
+        // --------------------------------------
+        // | Allocator instance | Aligned frame |
+        // --------------------------------------
+        //
+        const std::size_t totalAllocationSize =
+            AllocatorSizeAlignedByPromise() + size;
 
-    /// @brief Helper for alignment calculations.
-    /// @returns Size of Allocator.
-    ///
-    static constexpr std::size_t AllocatorSize()
-    {
-        return sizeof(Allocator);
-    }
+        // Allocate full storage size
+        //
+        void *rawPtr = a.allocate(totalAllocationSize);
 
-    /// @brief Helper for alignment calculations. Returns the larger alignment.
-    /// @returns Final alignment for allocator.
-    ///
-    static constexpr std::size_t AllocatorAlignment()
-    {
-        return alignof(Allocator) > FrameAlignment() ? alignof(Allocator)
-                                                     : FrameAlignment();
+        // Copy-place the allocator
+        //
+        ::new (rawPtr) Allocator{a};
+
+        // Advance pointer to 'after allocator' position and return
+        //
+        std::byte *rawMemory = static_cast<std::byte *>(rawPtr);
+
+        return rawMemory + AllocatorSizeAlignedByPromise();
     }
 
     /// @brief Helper for alignment calculations.
     /// Canonical alignment formula to ensure allocator is properly aligned
     /// @returns Aligned size of Allocator.
     ///
-    static constexpr std::size_t AllocatorSizeAlignedByPromise()
+    inline static constexpr std::size_t AllocatorSizeAlignedByPromise()
     {
-        return (AllocatorSize() + (AllocatorAlignment() - 1)) &
-               ~(AllocatorAlignment() - 1);
+        constexpr std::size_t frameAlignment = alignof(PromiseType);
+        constexpr std::size_t allocatorAlignment = alignof(Allocator);
+
+        constexpr std::size_t finalAllocatorAlignment = allocatorAlignment > frameAlignment
+            ? allocatorAlignment
+            : frameAlignment;
+
+        return (sizeof(Allocator) + (finalAllocatorAlignment - 1)) &
+               ~(finalAllocatorAlignment - 1);
     }
 };
 
