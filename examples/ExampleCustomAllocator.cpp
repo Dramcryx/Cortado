@@ -1,4 +1,4 @@
-/// @file ExampleCustomAllocator.h
+/// @file ExampleCustomAllocator.cpp
 /// Example of customizing an allocator.
 ///
 

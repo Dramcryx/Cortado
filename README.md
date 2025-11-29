@@ -18,7 +18,7 @@ Table of contents
   - Offload to background
   - Await another Task
   - Await multiple Tasks
-- Customization (change exception handler)
+- Customization
 - Getting started
 - Roadmap & TODO
 - Contributing & License
@@ -98,9 +98,12 @@ Cortado::Task<int> AsyncAction()
 }
 ```
 
-Customization — change exception handler
+Customization
 ---------------------------------------
-Cortado supports a user-provided ErrorHandler concept. Example (sketch):
+In Cortado you can customize multiple core concepts of coroutine runtime. They include:
+1) Allocator - it must follow `CoroutineAllocator` concept. A detailed exmaple is in `examples/ExampleCustomAllocator.cpp`.
+2) Scheduler - it must follow `CoroutineScheduler` concept. A detailed example is in `examples/ExampleCustomScheduler.cpp`.
+3) Exception handler:
 ```c++
 // Implement your handler (no STL exception_ptr required)
 class SillyExceptionHandler
@@ -125,6 +128,8 @@ struct SillyTaskImpl :
 template <typename T = void>
 using Task = Cortado::Task<T, SillyTaskImpl>;
 ```
+4) Atomic primitive which is required for task concurrency.
+5) Event primitive which is also required for task concurrency and sync wait.
 
 Getting started
 ---------------

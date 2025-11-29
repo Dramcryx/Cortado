@@ -98,3 +98,8 @@ jobs:
           echo "❌ Found warnings in output of ExampleCustomAllocator"
           exit 1
         fi
+        TSAN_OPTIONS="suppressions=$(pwd)/macOS-tsan.supp" ./build/ExampleCustomScheduler 2>&1 | tee output.log
+        if grep -qE "WARNING|ThreadSanitizer" output.log; then
+          echo "❌ Found warnings in output of ExampleCustomScheduler"
+          exit 1
+        fi
