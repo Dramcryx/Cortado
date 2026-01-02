@@ -9,11 +9,11 @@
 //
 #include <Cortado/Await.h>
 #include <Cortado/Concepts/CoroutineScheduler.h>
-#include <Cortado/Concepts/Mutex.h>
 
 // STL
 //
-#include <mutex> // for std::lock_guard
+#include <atomic>
+#include <limits>
 
 namespace Cortado
 {
@@ -23,9 +23,8 @@ namespace Detail
 ///
 struct LockAwaiterNode : AwaiterBase
 {
-    LockAwaiterNode *Prev{nullptr};
     std::coroutine_handle<> HandleToResume{nullptr};
-    void (*HandleResumerFunc)(std::coroutine_handle<>, void*) = nullptr;
+    void (*HandleResumerFunc)(std::coroutine_handle<>, void *) = nullptr;
     void *HandleResumerFuncContext = nullptr;
     LockAwaiterNode *Next{nullptr};
 
@@ -51,31 +50,6 @@ struct LockAwaiterNode : AwaiterBase
     }
 };
 
-/// @brief Helper function to attach new awaiter node to list anchor.
-/// @param anchorNode List anchor node, stored in mutex.
-/// @param nodeToInsert New awaiter node.
-///
-inline void InsertAwaiter(Detail::LockAwaiterNode *anchorNode,
-                          Detail::LockAwaiterNode *nodeToInsert)
-{
-    // Anchor node points to nothing or to itself - list is empty.
-    //
-    if (anchorNode->Prev == nullptr || anchorNode->Prev == anchorNode)
-    {
-        anchorNode->Next = nodeToInsert;
-        anchorNode->Prev = nodeToInsert;
-        nodeToInsert->Next = anchorNode;
-        nodeToInsert->Prev = anchorNode;
-    }
-    else
-    {
-        auto *last = anchorNode->Prev;
-        last->Next = nodeToInsert;
-        nodeToInsert->Prev = last;
-        nodeToInsert->Next = anchorNode;
-        nodeToInsert->Next->Prev = nodeToInsert;
-    }
-}
 /// @brief Common function for both awaiters to resume
 /// next awaiting coroutine asymmetrically.
 /// @param h Coroutine which takes the lock next.
@@ -90,20 +64,19 @@ inline void ScheduleNextWaiter(std::coroutine_handle<> h, void *context)
 
 /// @brief Forward declaration of default lock awaiter.
 ///
-template <Concepts::Atomic AtomicT, Concepts::Mutex MutexT>
+template <Concepts::Atomic AtomicT>
 class LockAwaiter;
 
 /// @brief Forward declaration of auto-lock awaiter.
 ///
-template <Concepts::Atomic AtomicT, Concepts::Mutex MutexT>
+template <Concepts::Atomic AtomicT>
 class ScopedLockAwaiter;
 
 /// @brief Async mutex implementation. Does not call mutex implementation if
 /// lock cannot be immediately acquired, and puts coroutine asleep.
 /// @tparam AtomicT Atomic primitive implementation.
-/// @tparam MutexT Mutex implementation.
 ///
-template <Concepts::Atomic AtomicT, Concepts::Mutex MutexT>
+template <Concepts::Atomic AtomicT>
 class AsyncMutex
 {
 public:
@@ -124,8 +97,56 @@ public:
     ///
     bool TryLock() noexcept
     {
-        Concepts::AtomicPrimitive expected = 0;
-        return m_lock.compare_exchange_strong(expected, 1);
+        auto expectedState = NotLocked;
+        return m_lockStateOrQueue.compare_exchange_strong(
+            expectedState,
+            LockedNoQueue,
+            std::memory_order::acquire,
+            std::memory_order::relaxed);
+    }
+
+    /// @brief Try enqueuing coroutine for locking
+    /// @param handleAwaiter Lock awaiter
+    /// @returns true if enqueued and suspension is rquired.
+    /// false if lock is acquired and coroutine is not enqueued.
+    ///
+    bool EnqueueForLock(Detail::LockAwaiterNode *handleAwaiter) noexcept
+    {
+        auto expectedState = m_lockStateOrQueue.load();
+        for (;;)
+        {
+            // If mutex is not locked, try acquiring lock without queueing
+            //
+            if (expectedState == NotLocked)
+            {
+                if (m_lockStateOrQueue.compare_exchange_weak(
+                        expectedState,
+                        LockedNoQueue,
+                        std::memory_order::acquire,
+                        std::memory_order::relaxed))
+                {
+                    return false;
+                }
+            }
+            // Mutex is locked, try enqueueing.
+            //
+            else
+            {
+                // Put LIFO node on top of waiters stack
+                //
+                handleAwaiter->Next =
+                    reinterpret_cast<Detail::LockAwaiterNode *>(expectedState);
+                if (m_lockStateOrQueue.compare_exchange_weak(
+                        expectedState,
+                        reinterpret_cast<Concepts::AtomicPrimitive>(
+                            handleAwaiter),
+                        std::memory_order::acquire,
+                        std::memory_order::relaxed))
+                {
+                    return true;
+                }
+            }
+        }
     }
 
     /// @brief Unlock; if there is a waiter, transfer ownership to it (resume
@@ -133,135 +154,127 @@ public:
     ///
     void Unlock() noexcept
     {
-        Detail::LockAwaiterNode* next = nullptr;
+        // Steal current state, pretending there are no waiters.
+        //
+        auto expectedState =
+            m_lockStateOrQueue.exchange(LockedNoQueue,
+                                        std::memory_order::acquire);
+
+        // If there were really no waiters, just set to unlocked state.
+        //
+        if (expectedState == LockedNoQueue)
         {
-            std::lock_guard lk(m_waitersMutex);
-            if (m_waiters.Next != nullptr && m_waiters.Next != &m_waiters)
-            {
-                next = m_waiters.Next;
-                m_waiters.Next = m_waiters.Next->Next;
-                m_waiters.Next->Prev = &m_waiters;
-                // keep m_lock as true because ownership is transferred
-            }
-            else
-            {
-                // no waiter: release the lock
-                m_lock.store(0);
-            }
+            m_lockStateOrQueue.store(NotLocked, std::memory_order::release);
+            return;
         }
 
-        if (next != nullptr)
+        // Scroll through the list to get the first awaiter.
+        //
+        auto *head = reinterpret_cast<Detail::LockAwaiterNode *>(expectedState);
+
+        Detail::LockAwaiterNode *prev = nullptr;
+        Detail::LockAwaiterNode *curr = head;
+        while (curr->Next != nullptr)
         {
-            next->Resume();
+            prev = curr;
+            curr = curr->Next;
         }
+
+        // prev != nullptr means there are more awaiters than one
+        //
+        if (prev != nullptr)
+        {
+            prev->Next = nullptr;
+            m_lockStateOrQueue.store(
+                reinterpret_cast<Concepts::AtomicPrimitive>(head),
+                std::memory_order::release);
+        }
+        else
+        {
+            m_lockStateOrQueue.store(LockedNoQueue, std::memory_order_release);
+        }
+
+        curr->Resume();
     }
 
     /// @brief Get awaitable: co_await mutex.LockAsync();
     ///
-    LockAwaiter<AtomicT, MutexT> LockAsync() noexcept
+    LockAwaiter<AtomicT> LockAsync() noexcept
     {
-        return LockAwaiter<AtomicT, MutexT>{this, m_waitersMutex, m_waiters};
+        return LockAwaiter<AtomicT>{this};
     }
 
     /// @brief Get awaitable: co_await mutex.LockAsync(scheduler);
     ///
     template <Concepts::CoroutineScheduler SchedulerT>
-    LockAwaiter<AtomicT, MutexT> LockAsync(SchedulerT &sched) noexcept
+    LockAwaiter<AtomicT> LockAsync(SchedulerT &sched) noexcept
     {
-        return LockAwaiter<AtomicT, MutexT>{this,
-                                            m_waitersMutex,
-                                            m_waiters,
-                                            sched};
+        return LockAwaiter<AtomicT>{this, sched};
     }
 
     /// @brief Get awaitable: co_await mutex.ScopedLockAsync();
     ///
-    ScopedLockAwaiter<AtomicT, MutexT> ScopedLockAsync() noexcept
+    ScopedLockAwaiter<AtomicT> ScopedLockAsync() noexcept
     {
-        return ScopedLockAwaiter<AtomicT, MutexT>{this,
-                                                  m_waitersMutex,
-                                                  m_waiters};
+        return ScopedLockAwaiter<AtomicT>{this};
     }
 
     /// @brief Get awaitable: co_await mutex.ScopedLockAsync(scheduler);
     ///
     template <Concepts::CoroutineScheduler SchedulerT>
-    ScopedLockAwaiter<AtomicT, MutexT> ScopedLockAsync(SchedulerT& sched) noexcept
+    ScopedLockAwaiter<AtomicT> ScopedLockAsync(SchedulerT &sched) noexcept
     {
-        return ScopedLockAwaiter<AtomicT, MutexT>{this,
-                                                  m_waitersMutex,
-                                                  m_waiters,
-                                                  sched};
+        return ScopedLockAwaiter<AtomicT>{this, sched};
     }
 
-
 private:
-    AtomicT m_lock{0};
-    MutexT m_waitersMutex;
-    Detail::LockAwaiterNode m_waiters;
+    static constexpr auto LockedNoQueue{0};
+    static constexpr auto NotLocked{
+        (std::numeric_limits<Concepts::AtomicPrimitive>::max)()};
+    AtomicT m_lockStateOrQueue{NotLocked};
 };
 
 /// @brief Mutex awaiter common code - storage of async mutex and synchronized
 /// wait list accessors.
 /// @tparam AtomicT Atomic primitive implementation.
-/// @tparam MutexT Mutex implementation.
 ///
-template <Concepts::Atomic AtomicT, Concepts::Mutex MutexT>
+template <Concepts::Atomic AtomicT>
 class LockAwaiterBase : protected Detail::LockAwaiterNode
 {
 protected:
-    AsyncMutex<AtomicT, MutexT> *m_mutex;
-    MutexT &m_waitersMutex;
-    Detail::LockAwaiterNode &m_waiters;
+    AsyncMutex<AtomicT> *m_mutex;
 
     /// @brief Costructor. Initializes storage.
     /// @param mutex AsyncMutex.
-    /// @param waitersMutex Synchronizer for waiters list.
-    /// @param waiters Waiters list.
     ///
-    LockAwaiterBase(AsyncMutex<AtomicT, MutexT> *mutex,
-                    MutexT &waitersMutex,
-                    Detail::LockAwaiterNode &waiters) noexcept :
-        m_mutex{mutex}, m_waitersMutex{waitersMutex}, m_waiters{waiters}
+    LockAwaiterBase(AsyncMutex<AtomicT> *mutex) noexcept : m_mutex{mutex}
     {
     }
-
-
 };
 
-/// @brief Awaitable returned by AsyncMutex<AtomicT, MutexT>::LockAsync()
+/// @brief Awaitable returned by AsyncMutex<AtomicT>::LockAsync()
 /// @tparam AtomicT Atomic primitive implementation.
-/// @tparam MutexT Mutex implementation.
 ///
-template <Concepts::Atomic AtomicT, Concepts::Mutex MutexT>
-class LockAwaiter : LockAwaiterBase<AtomicT, MutexT>
+template <Concepts::Atomic AtomicT>
+class LockAwaiter : LockAwaiterBase<AtomicT>
 {
 public:
     /// @brief Constructor. Forwards arguments to awaiter base.
     /// @param mutex AsyncMutex.
-    /// @param waitersMutex Synchronizer for waiters list.
-    /// @param waiters Waiters list.
     ///
-    LockAwaiter(AsyncMutex<AtomicT, MutexT> *mutex,
-                MutexT &waitersMutex,
-                Detail::LockAwaiterNode &waiters) noexcept :
-        LockAwaiterBase<AtomicT, MutexT>{mutex, waitersMutex, waiters}
+    LockAwaiter(AsyncMutex<AtomicT> *mutex) noexcept :
+        LockAwaiterBase<AtomicT>{mutex}
     {
     }
 
     /// @brief Constructor. Forwards arguments to awaiter base.
     /// @param mutex AsyncMutex.
-    /// @param waitersMutex Synchronizer for waiters list.
-    /// @param waiters Waiters list.
     /// @param scheduler Scheduler on which to resume this coroutine when lock
     /// is available.
     ///
     template <Concepts::CoroutineScheduler SchedulerT>
-    LockAwaiter(AsyncMutex<AtomicT, MutexT> *mutex,
-                      MutexT &waitersMutex,
-                      Detail::LockAwaiterNode &waiters,
-                      SchedulerT &scheduler) noexcept :
-        LockAwaiterBase<AtomicT, MutexT>{mutex, waitersMutex, waiters}
+    LockAwaiter(AsyncMutex<AtomicT> *mutex, SchedulerT &scheduler) noexcept :
+        LockAwaiterBase<AtomicT>{mutex}
     {
         Detail::LockAwaiterNode::HandleResumerFunc =
             Detail::ScheduleNextWaiter<SchedulerT>;
@@ -289,27 +302,9 @@ public:
     {
         AwaiterBase::await_suspend(h);
 
-        // attempt to acquire again (race with unlock)
-        if (this->m_mutex->TryLock())
-        {
-            return false; // don't suspend, continue immediately as owner
-        }
+        this->HandleToResume = h;
 
-        {
-            std::lock_guard lk(this->m_waitersMutex);
-            // re-check under queue lock to avoid a race with unlock
-            if (this->m_mutex->TryLock())
-            {
-                return false;
-            }
-
-            Detail::LockAwaiterNode::HandleToResume = h;
-
-            InsertAwaiter(&this->m_waiters, this);
-            // suspended; will be resumed by unlock()
-        }
-
-        return true;
+        return this->m_mutex->EnqueueForLock(this);
     }
 
     /// @brief Compiler contract: Resume action - do nothing, just restore
@@ -320,15 +315,14 @@ public:
 
 /// @brief Lightweight RAII guard for use in coroutine functions.
 /// @tparam AtomicT Atomic primitive implementation.
-/// @tparam MutexT Mutex implementation.
 ///
-template <Concepts::Atomic AtomicT, Concepts::Mutex MutexT>
+template <Concepts::Atomic AtomicT>
 class ScopedLock
 {
 public:
     /// @brief Constructor. Initialized held mutex.
     ///
-    ScopedLock(AsyncMutex<AtomicT, MutexT> *mutex) noexcept : m_mutex{mutex}
+    ScopedLock(AsyncMutex<AtomicT> *mutex) noexcept : m_mutex{mutex}
     {
     }
 
@@ -362,43 +356,35 @@ public:
     }
 
 private:
-    AsyncMutex<AtomicT, MutexT> *m_mutex;
+    AsyncMutex<AtomicT> *m_mutex;
     bool m_lock = true;
 };
 
 /// @brief Helper to create RAII guard after co_awaiting LockAsync():
 /// usage: auto guard = co_await mutex.ScopedLockAsync();
 /// @tparam AtomicT Atomic primitive implementation.
-/// @tparam MutexT Mutex implementation.
 ///
-template <Concepts::Atomic AtomicT, Concepts::Mutex MutexT>
-class ScopedLockAwaiter : LockAwaiterBase<AtomicT, MutexT>
+template <Concepts::Atomic AtomicT>
+class ScopedLockAwaiter : LockAwaiterBase<AtomicT>
 {
 public:
     /// @brief Construtor. Forwards arguments to awaiter base.
     /// @param mutex AsyncMutex.
-    /// @param waitersMutex Synchronizer for waiters list.
-    /// @param waiters Waiters list.
     ///
-    ScopedLockAwaiter(AsyncMutex<AtomicT, MutexT> *mutex,
-                      MutexT &waitersMutex,
-                      Detail::LockAwaiterNode &waiters) noexcept :
-        LockAwaiterBase<AtomicT, MutexT>{mutex, waitersMutex, waiters}
+    ScopedLockAwaiter(AsyncMutex<AtomicT> *mutex) noexcept :
+        LockAwaiterBase<AtomicT>{mutex}
     {
     }
 
     /// @brief Construtor. Forwards arguments to awaiter base.
     /// @param mutex AsyncMutex.
-    /// @param waitersMutex Synchronizer for waiters list.
-    /// @param waiters Waiters list.
-    /// @param scheduler Scheduler on which to resume this coroutine when lock is available.
+    /// @param scheduler Scheduler on which to resume this coroutine when lock
+    /// is available.
     ///
     template <Concepts::CoroutineScheduler SchedulerT>
-    ScopedLockAwaiter(AsyncMutex<AtomicT, MutexT> *mutex,
-                      MutexT &waitersMutex,
-                      Detail::LockAwaiterNode &waiters,
-                      SchedulerT& scheduler) noexcept :
-        LockAwaiterBase<AtomicT, MutexT>{mutex, waitersMutex, waiters}
+    ScopedLockAwaiter(AsyncMutex<AtomicT> *mutex,
+                      SchedulerT &scheduler) noexcept :
+        LockAwaiterBase<AtomicT>{mutex}
     {
         Detail::LockAwaiterNode::HandleResumerFunc =
             Detail::ScheduleNextWaiter<SchedulerT>;
@@ -423,23 +409,9 @@ public:
     {
         AwaiterBase::await_suspend(h);
 
-        if (this->m_mutex->TryLock())
-        {
-            return false;
-        }
-        {
-            std::lock_guard lk(this->m_waitersMutex);
-            if (this->m_mutex->TryLock())
-            {
-                return false;
-            }
+        this->HandleToResume = h;
 
-            Detail::LockAwaiterNode::HandleToResume = h;
-
-            InsertAwaiter(&this->m_waiters, this);
-        }
-
-        return true;
+        return this->m_mutex->EnqueueForLock(this);
     }
 
     /// @brief Compiler contract: Resume action - restore AwaiterBase state
@@ -449,7 +421,7 @@ public:
     decltype(auto) await_resume() noexcept
     {
         AwaiterBase::await_resume();
-        return ScopedLock<AtomicT, MutexT>{this->m_mutex};
+        return ScopedLock<AtomicT>{this->m_mutex};
     }
 };
 

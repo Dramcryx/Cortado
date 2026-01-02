@@ -63,8 +63,7 @@ public:
     {
         while (!IsSet())
         {
-            static_cast<EventImplT *>(this)->WaitForImpl(&m_state,
-                                                         UINT64_MAX);
+            static_cast<EventImplT *>(this)->WaitForImpl(&m_state, UINT64_MAX);
         }
     }
 

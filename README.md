@@ -191,7 +191,7 @@ Roadmap & TODO
 - Cancellation support.
 - Fuzzer and tests.
 - Stack tracing support (Natvis scripts, gdb/lldb helpers).
-- Wider default implementation support - fallback to non-futex runtimes, futex2 for newer Linux
+- MCS mutex implementation
 
 Contributing
 ------------

@@ -82,7 +82,8 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
                 // this frame is outside of coroutine function body.
                 //
                 _this.m_completionEvent.Set();
-                auto next = std::coroutine_handle<>::from_address(_this.CallbackValueRendezvous());
+                auto next = std::coroutine_handle<>::from_address(
+                    _this.CallbackValueRendezvous());
                 if (next != nullptr)
                 {
                     next.resume();
@@ -144,7 +145,8 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
     {
         auto expectedState = NoCompletionState;
 
-        auto desiredState = reinterpret_cast<Concepts::AtomicPrimitive>(h.address());
+        auto desiredState =
+            reinterpret_cast<Concepts::AtomicPrimitive>(h.address());
 
         if (m_continuation.compare_exchange_strong(expectedState, desiredState))
         {
@@ -224,12 +226,12 @@ protected:
 
 private:
     /// @brief Handle race-condition between a thread that sets value and a
-    /// thread that sets continuation. If value thread succeeds, we return nullptr.
-    /// Otherwise we return pointer to continuation (i.e. continuation was set after
-    /// coroutine completion).
+    /// thread that sets continuation. If value thread succeeds, we return
+    /// nullptr. Otherwise we return pointer to continuation (i.e. continuation
+    /// was set after coroutine completion).
     /// @returns Continuation or nullptr;
     ///
-    void* CallbackValueRendezvous()
+    void *CallbackValueRendezvous()
     {
         auto expectedState = NoCompletionState;
 
@@ -243,7 +245,7 @@ private:
         else if (expectedState > 1)
         {
             // Callback was already set, return to final_suspend
-            return reinterpret_cast<void*>(expectedState);
+            return reinterpret_cast<void *>(expectedState);
         }
 
         return nullptr;

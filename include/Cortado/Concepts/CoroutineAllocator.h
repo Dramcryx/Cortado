@@ -17,7 +17,7 @@ namespace Cortado::Concepts
 /// A general recommendation to custom allocator implementation is
 /// to be ref-counting proxy. This allows for quick copy operations
 /// which are required by compiler when picking a `new` overload.
-/// 
+///
 template <typename T>
 concept CoroutineAllocator = requires(T t, void *p, std::size_t s) {
     std::is_copy_constructible_v<T>;

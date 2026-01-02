@@ -7,11 +7,11 @@
 
 // Cortado
 //
-#include <Cortado/DefaultEvent.h>
-#include <Cortado/DefaultScheduler.h>
 #include <Cortado/Common/STLAtomic.h>
 #include <Cortado/Common/STLCoroutineAllocator.h>
 #include <Cortado/Common/STLExceptionHandler.h>
+#include <Cortado/DefaultEvent.h>
+#include <Cortado/DefaultScheduler.h>
 
 namespace Cortado
 {

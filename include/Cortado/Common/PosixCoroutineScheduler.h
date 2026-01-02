@@ -28,8 +28,8 @@ public:
     /// numThreads threads.
     /// @param numThreads Number of threads in pool.
     ///
-    PosixCoroutineScheduler(size_t numThreads = std::thread::hardware_concurrency()) :
-        stop{false}
+    PosixCoroutineScheduler(
+        size_t numThreads = std::thread::hardware_concurrency()) : stop{false}
     {
         pthread_mutex_init(&m_queueMutex, nullptr);
         pthread_cond_init(&m_condition, nullptr);
@@ -76,7 +76,8 @@ private:
     ///
     static void *WorkerFn(void *arg)
     {
-        PosixCoroutineScheduler *pool = static_cast<PosixCoroutineScheduler *>(arg);
+        PosixCoroutineScheduler *pool =
+            static_cast<PosixCoroutineScheduler *>(arg);
         pool->Run();
         return nullptr;
     }
