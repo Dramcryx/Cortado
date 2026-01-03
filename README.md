@@ -185,7 +185,6 @@ In Visual Sutdio with your project open right-click on project -> `Manage NuGet 
 
 Roadmap & TODO
 --------------
-- Async event
 - Proper packaging and releases.
 - Better documentation and examples (including integration with various schedulers).
 - Cancellation support.

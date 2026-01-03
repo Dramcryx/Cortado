@@ -5,6 +5,7 @@
 // Cortado
 //
 #include <Cortado/AsyncMutex.h>
+#include <Cortado/Await.h>
 
 // STL
 //

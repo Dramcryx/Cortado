@@ -7,6 +7,7 @@
 // Cortado
 //
 #include <Cortado/AsyncMutex.h>
+#include <Cortado/Await.h>
 
 template <typename T = void>
 using Task = Cortado::Task<T>;

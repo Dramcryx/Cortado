@@ -7,61 +7,15 @@
 
 // Cortado
 //
-#include <Cortado/Await.h>
 #include <Cortado/Concepts/CoroutineScheduler.h>
+#include <Cortado/Detail/CoroutineAwaiterQueueNode.h>
 
 // STL
 //
-#include <atomic>
 #include <limits>
 
 namespace Cortado
 {
-namespace Detail
-{
-/// @brief Base for all of the mutex awaiters, for storing in a linked-list.
-///
-struct LockAwaiterNode : AwaiterBase
-{
-    std::coroutine_handle<> HandleToResume{nullptr};
-    void (*HandleResumerFunc)(std::coroutine_handle<>, void *) = nullptr;
-    void *HandleResumerFuncContext = nullptr;
-    LockAwaiterNode *Next{nullptr};
-
-    inline void Resume()
-    {
-        if (HandleToResume == nullptr)
-        {
-            return;
-        }
-
-        // Resume waiter right here if there is no scheduler.
-        //
-        if (HandleResumerFunc == nullptr)
-        {
-            HandleToResume.resume();
-            return;
-        }
-
-        // If we have a handler, we are likely asked to schedule
-        // next waiter on a scheduler.
-        //
-        HandleResumerFunc(HandleToResume, HandleResumerFuncContext);
-    }
-};
-
-/// @brief Common function for both awaiters to resume
-/// next awaiting coroutine asymmetrically.
-/// @param h Coroutine which takes the lock next.
-/// @param context Type-erased scheduler.
-///
-template <Concepts::CoroutineScheduler SchedulerT>
-inline void ScheduleNextWaiter(std::coroutine_handle<> h, void *context)
-{
-    reinterpret_cast<SchedulerT *>(context)->Schedule(h);
-}
-} // namespace Detail
-
 /// @brief Forward declaration of default lock awaiter.
 ///
 template <Concepts::Atomic AtomicT>
@@ -110,9 +64,11 @@ public:
     /// @returns true if enqueued and suspension is rquired.
     /// false if lock is acquired and coroutine is not enqueued.
     ///
-    bool EnqueueForLock(Detail::LockAwaiterNode *handleAwaiter) noexcept
+    bool EnqueueForLock(
+        Detail::CoroutineAwaiterQueueNode *handleAwaiter) noexcept
     {
-        auto expectedState = m_lockStateOrQueue.load();
+        auto expectedState =
+            m_lockStateOrQueue.load(std::memory_order::seq_cst);
         for (;;)
         {
             // If mutex is not locked, try acquiring lock without queueing
@@ -135,7 +91,8 @@ public:
                 // Put LIFO node on top of waiters stack
                 //
                 handleAwaiter->Next =
-                    reinterpret_cast<Detail::LockAwaiterNode *>(expectedState);
+                    reinterpret_cast<Detail::CoroutineAwaiterQueueNode *>(
+                        expectedState);
                 if (m_lockStateOrQueue.compare_exchange_weak(
                         expectedState,
                         reinterpret_cast<Concepts::AtomicPrimitive>(
@@ -170,10 +127,11 @@ public:
 
         // Scroll through the list to get the first awaiter.
         //
-        auto *head = reinterpret_cast<Detail::LockAwaiterNode *>(expectedState);
+        auto *head = reinterpret_cast<Detail::CoroutineAwaiterQueueNode *>(
+            expectedState);
 
-        Detail::LockAwaiterNode *prev = nullptr;
-        Detail::LockAwaiterNode *curr = head;
+        Detail::CoroutineAwaiterQueueNode *prev = nullptr;
+        Detail::CoroutineAwaiterQueueNode *curr = head;
         while (curr->Next != nullptr)
         {
             prev = curr;
@@ -239,7 +197,7 @@ private:
 /// @tparam AtomicT Atomic primitive implementation.
 ///
 template <Concepts::Atomic AtomicT>
-class LockAwaiterBase : protected Detail::LockAwaiterNode
+class LockAwaiterBase : protected Detail::CoroutineAwaiterQueueNode
 {
 protected:
     AsyncMutex<AtomicT> *m_mutex;
@@ -276,10 +234,11 @@ public:
     LockAwaiter(AsyncMutex<AtomicT> *mutex, SchedulerT &scheduler) noexcept :
         LockAwaiterBase<AtomicT>{mutex}
     {
-        Detail::LockAwaiterNode::HandleResumerFunc =
+        Detail::CoroutineAwaiterQueueNode::HandleResumerFunc =
             Detail::ScheduleNextWaiter<SchedulerT>;
 
-        Detail::LockAwaiterNode::HandleResumerFuncContext = &scheduler;
+        Detail::CoroutineAwaiterQueueNode::HandleResumerFuncContext =
+            &scheduler;
     }
 
     /// @brief Compiler contract: Try locking mutex quickly.
@@ -386,10 +345,11 @@ public:
                       SchedulerT &scheduler) noexcept :
         LockAwaiterBase<AtomicT>{mutex}
     {
-        Detail::LockAwaiterNode::HandleResumerFunc =
+        Detail::CoroutineAwaiterQueueNode::HandleResumerFunc =
             Detail::ScheduleNextWaiter<SchedulerT>;
 
-        Detail::LockAwaiterNode::HandleResumerFuncContext = &scheduler;
+        Detail::CoroutineAwaiterQueueNode::HandleResumerFuncContext =
+            &scheduler;
     }
 
     /// @brief Compiler contract: Try locking mutex quickly.

@@ -46,9 +46,19 @@ concept Atomic = requires(T t,
     } -> std::same_as<bool>;
 };
 
+/// @brief Extension for Atomic which requires wait/notify methods
+///
+template <typename T>
+concept FutexLikeAtomic =
+    Atomic<T> && requires(T t, AtomicPrimitive old, std::memory_order mo) {
+        { t.wait(old, mo) } -> std::same_as<void>;
+        { t.notify_one() } -> std::same_as<void>;
+        { t.notify_all() } -> std::same_as<void>;
+    };
+
 /// @brief Helper concept to define if T defines
 /// Atomic type (via `using` or `typedef`), and that type
-/// suits @link Cortado::Concepts::Atomic Atomic@endlink concept constaints.
+/// satisifes @link Cortado::Concepts::Atomic Atomic@endlink concept constaints.
 /// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink type.
 ///
 template <typename T>
@@ -57,6 +67,17 @@ concept HasAtomic = requires {
     //
     typename T::Atomic;
 } && Atomic<typename T::Atomic>;
+
+/// @brief Helper concept to define if T defines
+/// Atomic type (via `using` or `typedef`), and that type
+/// satisifes @link Cortado::Concepts::Atomic Atomic@endlink and @link
+/// Cortado::Concepts::FutexLikeAtomic FutexLikeAtomic@endlink concepts
+/// constaints.
+/// @tparam T @link Cortado::Concepts::TaskImpl TaskImpl@endlink type.
+///
+template <typename T>
+concept HasFutexLikeAtomic =
+    HasAtomic<T> && FutexLikeAtomic<typename T::Atomic>;
 
 } // namespace Cortado::Concepts
 
