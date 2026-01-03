@@ -7,7 +7,7 @@
 
 // STL
 //
-#include <cstdint>
+#include <atomic>
 #include <concepts>
 
 namespace Cortado::Concepts
@@ -27,16 +27,24 @@ using AtomicPrimitive = std::int64_t;
 /// @tparam T Candidate type for atomicity.
 ///
 template <typename T>
-concept Atomic =
-    requires(T t, AtomicPrimitive &expected, AtomicPrimitive desired) {
-        sizeof(AtomicPrimitive) >= sizeof(void *);
-        { T{AtomicPrimitive{}} };
-        { t.load() } -> std::same_as<AtomicPrimitive>;
-        { t.store(AtomicPrimitive{}) } -> std::same_as<void>;
-        { t.operator++() } -> std::same_as<AtomicPrimitive>;
-        { t.operator--() } -> std::same_as<AtomicPrimitive>;
-        { t.compare_exchange_strong(expected, desired) } -> std::same_as<bool>;
-    };
+concept Atomic = requires(T t,
+                          AtomicPrimitive &expected,
+                          AtomicPrimitive desired,
+                          std::memory_order memoryOrder) {
+    sizeof(AtomicPrimitive) >= sizeof(void *);
+    { T{AtomicPrimitive{}} };
+    { t.load(memoryOrder) } -> std::same_as<AtomicPrimitive>;
+    { t.store(AtomicPrimitive{}, memoryOrder) } -> std::same_as<void>;
+    { t.operator++() } -> std::same_as<AtomicPrimitive>;
+    { t.operator--() } -> std::same_as<AtomicPrimitive>;
+    { t.exchange(desired, memoryOrder) } -> std::same_as<AtomicPrimitive>;
+    {
+        t.compare_exchange_strong(expected, desired, memoryOrder, memoryOrder)
+    } -> std::same_as<bool>;
+    {
+        t.compare_exchange_weak(expected, desired, memoryOrder, memoryOrder)
+    } -> std::same_as<bool>;
+};
 
 /// @brief Helper concept to define if T defines
 /// Atomic type (via `using` or `typedef`), and that type

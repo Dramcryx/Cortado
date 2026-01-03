@@ -7,13 +7,11 @@
 // Cortado
 //
 #include <Cortado/AsyncMutex.h>
-#include <Cortado/DefaultEvent.h>
-#include <Cortado/DefaultMutex.h>
 
 template <typename T = void>
 using Task = Cortado::Task<T>;
 
-using AsyncMutex = Cortado::AsyncMutex<std::atomic_int64_t, Cortado::DefaultMutex>;
+using AsyncMutex = Cortado::AsyncMutex<std::atomic_int64_t>;
 
 TEST(AsyncMutexTests, BasicLockUnlock)
 {
@@ -34,7 +32,8 @@ TEST(AsyncMutexTests, BasicLockUnlock)
     //
     EXPECT_TRUE(awaiter.await_ready());
 
-    // Call task and expect it to suspend because we hold the lock from this thread
+    // Call task and expect it to suspend because we hold the lock from this
+    // thread
     //
     auto taskObject = task();
 
@@ -134,13 +133,7 @@ TEST(AsyncMutexTests, BasicConcurrency)
         co_return 42;
     };
 
-    IntTask tasks[ConcurrencyCount] =
-    {
-        task(),
-        task(),
-        task(),
-        task()
-    };
+    IntTask tasks[ConcurrencyCount] = {task(), task(), task(), task()};
 
     ASSERT_TRUE(reg.SuspendAllReached.WaitFor(2000))
         << "All tasks should reach suspended state!";
@@ -170,4 +163,83 @@ TEST(AsyncMutexTests, BasicConcurrency)
     {
         ASSERT_TRUE(reg.PassedScopedLock[i].IsSet());
     }
+}
+
+TEST(AsyncMutexTests, TryLockWhileLocked)
+{
+    AsyncMutex m;
+
+    // Lock manually
+    //
+    ASSERT_TRUE(m.TryLock());
+
+    // Lock manually again, should not succeed
+    //
+    EXPECT_FALSE(m.TryLock());
+
+    // Release mutex
+    //
+    m.Unlock();
+}
+
+TEST(AsyncMutexTests, ScopedLockUnlocksAfterException)
+{
+    AsyncMutex m;
+
+    ASSERT_TRUE(m.TryLock());
+
+    auto task = [&]() -> Cortado::Task<void>
+    {
+        auto lock = co_await m.ScopedLockAsync(
+            Cortado::DefaultScheduler::GetDefaultBackgroundScheduler());
+        throw std::runtime_error("FromLambda");
+    };
+
+    m.Unlock();
+
+    EXPECT_ANY_THROW(task().Get());
+
+    EXPECT_TRUE(m.TryLock());
+}
+
+TEST(AsyncMutexAdditionalTests, StressOnDefaultScheduler)
+{
+    constexpr std::size_t Threads = 8;
+    constexpr std::size_t Iterations = 2000;
+
+    AsyncMutex m;
+    std::atomic<std::int64_t> counter{0};
+
+    auto &sched = Cortado::DefaultScheduler::GetDefaultBackgroundScheduler();
+    auto worker = [&]() -> Cortado::Task<void>
+    {
+        for (std::size_t i = 0; i < Iterations; ++i)
+        {
+            auto guard = co_await m.ScopedLockAsync(sched);
+            counter.fetch_add(1, std::memory_order_relaxed);
+        }
+    };
+
+    Cortado::Task<void> tasks[Threads]{worker(),
+                                       worker(),
+                                       worker(),
+                                       worker(),
+                                       worker(),
+                                       worker(),
+                                       worker(),
+                                       worker()};
+
+    auto waitAllTask = Cortado::WhenAll(tasks[0],
+                                        tasks[1],
+                                        tasks[2],
+                                        tasks[3],
+                                        tasks[4],
+                                        tasks[5],
+                                        tasks[6],
+                                        tasks[7]);
+
+    EXPECT_TRUE(waitAllTask.WaitFor(2000));
+
+    EXPECT_TRUE(m.TryLock());
+    EXPECT_EQ(counter.load(), Threads * Iterations);
 }

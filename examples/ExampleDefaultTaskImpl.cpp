@@ -5,7 +5,6 @@
 // Cortado
 //
 #include <Cortado/AsyncMutex.h>
-#include <Cortado/DefaultMutex.h>
 
 // STL
 //
@@ -27,7 +26,7 @@
 using namespace Cortado;
 using namespace Cortado::Common;
 
-using MutexT = AsyncMutex<std::atomic_int64_t, DefaultMutex>;
+using MutexT = AsyncMutex<std::atomic_int64_t>;
 
 class WithAsyncMethod
 {
