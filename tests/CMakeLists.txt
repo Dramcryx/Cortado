@@ -15,6 +15,7 @@ add_executable(
     ${CMAKE_CURRENT_LIST_DIR}/CoroutineAllocatorTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskWithAdditionalStorageTests.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/AsyncEventTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/AsyncMutexTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/DefaultEventTests.cpp)
 
