@@ -73,15 +73,14 @@ public:
         auto currentState =
             m_waitQueue.exchange(EventSet, std::memory_order::acquire);
 
-        // If we can do futex thing here, then we should do it.
-        //
-        if constexpr (Concepts::FutexLikeAtomic<AtomicT>)
-        {
-            m_waitQueue.notify_all();
-        }
-
         if (currentState == EventNotSet)
         {
+            // If we can do futex thing here, then we should do it.
+            //
+            if constexpr (Concepts::FutexLikeAtomic<AtomicT>)
+            {
+                m_waitQueue.notify_all();
+            }
             return;
         }
 
@@ -90,6 +89,13 @@ public:
             return;
         }
 
+        // If we can do futex thing here, then we should do it.
+        //
+        if constexpr (Concepts::FutexLikeAtomic<AtomicT>)
+        {
+            m_waitQueue.notify_all();
+        }
+            
         auto *current =
             reinterpret_cast<Detail::CoroutineAwaiterQueueNode *>(currentState);
         for (; current != nullptr; current = current->Next)
