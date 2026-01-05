@@ -48,6 +48,7 @@ struct Task<R, T>::TaskAwaiter : AwaiterBase
     ///
     R await_resume()
     {
+        Base::await_resume();
         return m_awaitedTask.Get();
     }
 
@@ -62,7 +63,7 @@ private:
 /// @returns TaskAwaiter.
 ///
 template <typename R, Concepts::TaskImpl T>
-auto operator co_await(Task<R, T> &&rvalue)
+inline auto operator co_await(Task<R, T> &&rvalue)
 {
     return typename Task<R, T>::TaskAwaiter{std::forward<Task<R, T>>(rvalue)};
 }
@@ -166,7 +167,7 @@ inline ResumeBackgroundAwaiter ResumeBackground()
 ///
 template <Concepts::TaskImpl T, typename R, typename... Args>
     requires std::is_default_constructible_v<typename T::Allocator>
-Task<void, T> WhenAll(Task<R, T> &first, Args &...next)
+inline Task<void, T> WhenAll(Task<R, T> &first, Args &...next)
 {
     using AllocatorT = typename T::Allocator;
 
@@ -183,9 +184,9 @@ Task<void, T> WhenAll(Task<R, T> &first, Args &...next)
 /// @return Task<void, T>.
 ///
 template <Concepts::TaskImpl T, typename R, typename... Args>
-Task<void, T> WhenAll(typename T::Allocator alloc,
-                      Task<R, T> &first,
-                      Args &...next)
+inline Task<void, T> WhenAll(typename T::Allocator alloc,
+                             Task<R, T> &first,
+                             Args &...next)
 {
     co_await first;
     (void(co_await next), ...);
@@ -238,7 +239,7 @@ private:
 /// @returns CoroutineSchedulerAwaiter.
 ///
 template <Concepts::CoroutineScheduler T>
-auto operator co_await(T &sched)
+inline auto operator co_await(T &sched)
 {
     return CoroutineSchedulerAwaiter{sched};
 };
@@ -253,9 +254,9 @@ auto operator co_await(T &sched)
 /// @return Task<void, T>.
 ///
 template <Concepts::TaskImpl T, typename R, typename... Args>
-Task<void, T> WhenAny(typename T::Allocator alloc,
-                      Task<R, T> &first,
-                      Args &...next)
+inline Task<void, T> WhenAny(typename T::Allocator alloc,
+                             Task<R, T> &first,
+                             Args &...next)
 {
     using AtomicT = typename T::Atomic;
 
@@ -283,7 +284,7 @@ Task<void, T> WhenAny(typename T::Allocator alloc,
 ///
 template <Concepts::TaskImpl T, typename R, typename... Args>
     requires std::is_default_constructible_v<typename T::Allocator>
-decltype(auto) WhenAny(Task<R, T> &first, Args &...next)
+inline Task<void, T> WhenAny(Task<R, T> &first, Args &...next)
 {
     using AllocatorT = typename T::Allocator;
 

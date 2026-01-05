@@ -10,6 +10,10 @@ add_executable(ExampleCustomScheduler examples/ExampleCustomScheduler.cpp)
 
 target_include_directories(ExampleCustomScheduler PRIVATE ./include)
 
+add_executable(ExampleCustomExceptionHandler examples/ExampleCustomExceptionHandler.cpp)
+
+target_include_directories(ExampleCustomExceptionHandler PRIVATE ./include)
+
 if (WIN32)
   target_compile_definitions(ExampleDefaultTaskImpl PRIVATE _AMD64_ _UNICODE)
   target_link_libraries(ExampleDefaultTaskImpl PRIVATE Synchronization.lib)
@@ -19,6 +23,9 @@ if (WIN32)
 
   target_compile_definitions(ExampleCustomScheduler PRIVATE _AMD64_ _UNICODE)
   target_link_libraries(ExampleCustomScheduler PRIVATE Synchronization.lib)
+
+  target_compile_definitions(ExampleCustomExceptionHandler PRIVATE _AMD64_ _UNICODE)
+  target_link_libraries(ExampleCustomExceptionHandler PRIVATE Synchronization.lib)
 endif()
 
 option(ASAN "Build with address sanitizer" OFF)
@@ -41,6 +48,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
 
     target_compile_options(ExampleCustomScheduler PRIVATE -fsanitize=address)
     target_link_options(ExampleCustomScheduler PRIVATE -fsanitize=address)
+
+    target_compile_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
+    target_link_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
   endif()
 
   if (TSAN)
@@ -53,6 +63,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
 
     target_compile_options(ExampleCustomScheduler PRIVATE -fsanitize=address)
     target_link_options(ExampleCustomScheduler PRIVATE -fsanitize=address)
+
+    target_compile_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
+    target_link_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
   endif()
 else()
   message(STATUS ${CMAKE_CXX_COMPILER_ID})

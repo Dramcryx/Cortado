@@ -1,5 +1,5 @@
 /// @brief DefaultTaskImpl.h
-/// A default task implementation for Win32 and Mac.
+/// A default task implementation for Win32, macOS and Linux.
 ///
 
 #ifndef CORTADO_DEFAULT_TASK_IMPL_H
