@@ -5,37 +5,41 @@
 #ifndef CORTADO_DEFAULT_EVENT_H
 #define CORTADO_DEFAULT_EVENT_H
 
+// Cortado
+//
+#include <Cortado/AsyncEvent.h>
+
 #ifdef _WIN32
 
 // Cortado
 //
-#include <Cortado/Common/Win32Event.h>
+#include <Cortado/Common/Win32FutexLikeAtomic.h>
 
 namespace Cortado
 {
-using DefaultEvent = Cortado::Common::Win32Event;
+using DefaultEvent = AsyncEvent<Common::Win32FutexLikeAtomic>;
 } // namespace Cortado
 
 #elif defined(__APPLE__)
 
 // Cortado
 //
-#include <Cortado/Common/MacOSEvent.h>
+#include <Cortado/Common/MacOSFutexLikeAtomic.h>
 
 namespace Cortado
 {
-using DefaultEvent = Cortado::Common::MacOSEvent;
+using DefaultEvent = AsyncEvent<Cortado::Common::MacOSFutexLikeAtomic>;
 } // namespace Cortado
 
 #elif defined(__linux__)
 
 // Cortado
 //
-#include <Cortado/Common/LinuxEvent.h>
+#include <Cortado/Common/LinuxFutexLikeAtomic.h>
 
 namespace Cortado
 {
-using DefaultEvent = Cortado::Common::LinuxEvent;
+using DefaultEvent = AsyncEvent<Cortado::Common::LinuxFutexLikeAtomic>;
 } // namespace Cortado
 
 #else

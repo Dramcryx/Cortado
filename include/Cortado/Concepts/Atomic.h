@@ -50,8 +50,8 @@ concept Atomic = requires(T t,
 ///
 template <typename T>
 concept FutexLikeAtomic =
-    Atomic<T> && requires(T t, AtomicPrimitive old, std::memory_order mo) {
-        { t.wait(old, mo) } -> std::same_as<void>;
+    Atomic<T> && requires(T t, AtomicPrimitive old) {
+        { t.wait(old) } -> std::same_as<void>;
         { t.notify_one() } -> std::same_as<void>;
         { t.notify_all() } -> std::same_as<void>;
     };

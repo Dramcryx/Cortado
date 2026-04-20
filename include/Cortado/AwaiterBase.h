@@ -7,7 +7,7 @@
 
 // Cortado
 //
-#include <Cortado/Task.h>
+#include <Cortado/Detail/PromiseType.h>
 
 namespace Cortado
 {
@@ -23,7 +23,7 @@ protected:
     ///
     template <Concepts::TaskImpl T, typename R>
     inline void await_suspend(
-        std::coroutine_handle<Cortado::PromiseType<T, R>> h)
+        std::coroutine_handle<Detail::PromiseType<T, R>> h)
     {
         if constexpr (Concepts::HasAdditionalStorage<T>)
         {
@@ -62,7 +62,7 @@ private:
         if constexpr (Concepts::HasAdditionalStorage<T>)
         {
             auto restored =
-                std::coroutine_handle<Cortado::PromiseType<T, R>>::from_address(
+                std::coroutine_handle<Detail::PromiseType<T, R>>::from_address(
                     h.address());
             restored.promise().BeforeResume();
         }

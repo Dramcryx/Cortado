@@ -6,16 +6,15 @@
 
 // Cortado
 //
-#include <Cortado/AsyncEvent.h>
 #include <Cortado/Await.h>
 
-using AsyncEvent = Cortado::AsyncEvent<Cortado::Common::STLAtomic::Atomic>;
+using AsyncEvent = Cortado::DefaultEvent;
 using DefaultScheduler = Cortado::DefaultScheduler;
 
 template <typename R>
 using Task = Cortado::Task<R>;
 
-TEST(AsyncEventTests, BasicWaitSet)
+TEST(AsyncEventTests, WaitAsync_WhenSetAfterAwait_Success)
 {
     // Basic await and set
     //
@@ -40,7 +39,7 @@ TEST(AsyncEventTests, BasicWaitSet)
     EXPECT_EQ(t.Get(), 42);   // value propagated
 }
 
-TEST(AsyncEventTests, WaitSetTwice)
+TEST(AsyncEventTests, WaitAsync_WhenTwoWaiters_Success)
 {
     // Event is awaited by two tasks
     //
@@ -74,7 +73,7 @@ TEST(AsyncEventTests, WaitSetTwice)
     EXPECT_EQ(t2.Get(), 2);
 }
 
-TEST(AsyncEventTests, WaitWithScheduler)
+TEST(AsyncEventTests, WaitAsync_WhenResumeOnScheduler_Success)
 {
     // A coroutine awaits an event, passing scheduler
     // on which it is going to resume once event is set.
@@ -99,7 +98,7 @@ TEST(AsyncEventTests, WaitWithScheduler)
     EXPECT_EQ(t.Get(), 99);
 }
 
-TEST(AsyncEventTests, MultipleWaiters)
+TEST(AsyncEventTests, WaitAsync_WhenMultipleWaiters_Success)
 {
     // Create five awaiters
     //
@@ -130,7 +129,7 @@ TEST(AsyncEventTests, MultipleWaiters)
     }
 }
 
-TEST(AsyncEventTests, AwaiterException)
+TEST(AsyncEventTests, WaitAsync_WhenCoroutineThrows_Fail)
 {
     // Test coroutine error completion after event is signaled.
     //
@@ -163,7 +162,7 @@ TEST(AsyncEventTests, AwaiterException)
     EXPECT_EQ(t2.Get(), 123);
 }
 
-TEST(AsyncEventTests, LatchLikeBehavior)
+TEST(AsyncEventTests, WaitAsync_WhenAlreadySet_NoSuspend)
 {
     // Event is set only once; after that all waiters are released
     AsyncEvent latch;
@@ -198,7 +197,7 @@ TEST(AsyncEventTests, LatchLikeBehavior)
     EXPECT_TRUE(t3.IsReady()); // no suspension
 }
 
-TEST(AsyncEventTests, SyncWait)
+TEST(AsyncEventTests, Wait_WhenSetFromBackground_Success)
 {
     AsyncEvent event;
 
@@ -216,4 +215,47 @@ TEST(AsyncEventTests, SyncWait)
 
     ASSERT_TRUE(event.IsSet());
     ASSERT_TRUE(fireEventTask.WaitFor(2000));
+}
+
+TEST(AsyncEventTests, WaitAsync_WhenAlreadySetOnBackground_Success)
+{
+    // Event is set before any coroutine awaits it on a background thread.
+    // The awaiter must take the fast path and never suspend.
+    //
+
+    AsyncEvent ev;
+    ev.Set();
+
+    auto task = [&]() -> Task<int>
+    {
+        co_await Cortado::ResumeBackground();
+        co_await ev.WaitAsync(); // should not suspend
+        co_return 77;
+    };
+
+    auto t = task();
+
+    EXPECT_TRUE(t.WaitFor(1000));
+    EXPECT_EQ(t.Get(), 77);
+}
+
+TEST(AsyncEventTests, Set_WhenCalledMultipleTimes_Success)
+{
+    // Calling Set() multiple times must not crash or change behavior.
+    //
+
+    AsyncEvent ev;
+
+    auto t = [&]() -> Task<int>
+    {
+        co_await ev.WaitAsync();
+        co_return 1;
+    }();
+
+    ev.Set();
+    ev.Set(); // second call is a no-op
+    ev.Set(); // third call is a no-op
+
+    EXPECT_TRUE(t.IsReady());
+    EXPECT_EQ(t.Get(), 1);
 }

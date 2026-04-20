@@ -8,6 +8,7 @@
 // Cortado
 //
 #include <Cortado/AsyncEvent.h>
+#include <Cortado/Task.h>
 #include <Cortado/Concepts/BackgroundResumable.h>
 
 namespace Cortado
@@ -38,7 +39,7 @@ struct Task<R, T>::TaskAwaiter : AwaiterBase
     /// ready.
     ///
     template <Concepts::TaskImpl T2, typename R2>
-    void await_suspend(std::coroutine_handle<Cortado::PromiseType<T2, R2>> h)
+    void await_suspend(std::coroutine_handle<Detail::PromiseType<T2, R2>> h)
     {
         Base::await_suspend(h);
         m_awaitedTask.m_handle.promise().SetContinuation(h);
@@ -94,7 +95,7 @@ struct Task<R, T>::TaskLValueAwaier : AwaiterBase
     /// ready.
     ///
     template <Concepts::TaskImpl T2, typename R2>
-    void await_suspend(std::coroutine_handle<Cortado::PromiseType<T2, R2>> h)
+    void await_suspend(std::coroutine_handle<Detail::PromiseType<T2, R2>> h)
     {
         Base::await_suspend(h);
         m_awaitedTask.m_handle.promise().SetContinuation(h);
@@ -137,7 +138,7 @@ struct ResumeBackgroundAwaiter : AwaiterBase
     /// scheduler.
     ///
     template <Concepts::BackgroundResumable T, typename R>
-    void await_suspend(std::coroutine_handle<Cortado::PromiseType<T, R>> h)
+    void await_suspend(std::coroutine_handle<Detail::PromiseType<T, R>> h)
     {
         Base::await_suspend(h);
 
@@ -217,7 +218,7 @@ struct CoroutineSchedulerAwaiter : AwaiterBase
     /// scheduler.
     ///
     template <Concepts::TaskImpl TTask, typename R>
-    void await_suspend(std::coroutine_handle<Cortado::PromiseType<TTask, R>> h)
+    void await_suspend(std::coroutine_handle<Detail::PromiseType<TTask, R>> h)
     {
         Base::await_suspend(h);
 
@@ -260,18 +261,54 @@ inline Task<void, T> WhenAny(typename T::Allocator alloc,
 {
     using AtomicT = typename T::Atomic;
 
-    AsyncEvent<AtomicT> event;
-
-    auto onCompleted = [](Task<R, T> &t, auto &event) -> Task<void, T>
+    struct RefCountedEvent :
+        public Cortado::Detail::AtomicRefCount<AtomicT>,
+        public AsyncEvent<AtomicT>
     {
-        co_await t;
-        event.Set();
     };
 
-    onCompleted(first, event);
-    (onCompleted(next, event), ...);
+    auto refCountedEventDeleter = [&](RefCountedEvent *e)
+    {
+        if (e->Release() == 0)
+        {
+            e->~RefCountedEvent();
+            alloc.deallocate(reinterpret_cast<std::byte *>(e),
+                             sizeof(RefCountedEvent));
+        }
+    };
 
-    co_await event.WaitAsync();
+    using RefCountedEventPtr =
+        std::unique_ptr<RefCountedEvent, decltype(refCountedEventDeleter)>;
+
+    RefCountedEventPtr sharedEvent{
+        reinterpret_cast<RefCountedEvent *>(alloc.allocate(sizeof(RefCountedEvent))),
+                                   refCountedEventDeleter};
+
+    ::new (sharedEvent.get()) RefCountedEvent{};
+
+    /// @brief RAII guard that signals the shared event on destruction,
+    /// ensuring Set() is called even if co_await throws.
+    ///
+    struct EventSetGuard
+    {
+        RefCountedEvent *Event;
+        EventSetGuard(RefCountedEvent *e) : Event{e} { Event->AddRef(); }
+        ~EventSetGuard() { Event->Set(); }
+    };
+
+    auto onCompleted = [](Task<R, T> &t, auto event) -> Task<void, T>
+    {
+        EventSetGuard guard{event.get()};
+        co_await t;
+    };
+
+    onCompleted(first,
+                RefCountedEventPtr{sharedEvent.get(), refCountedEventDeleter});
+    (onCompleted(next,
+                 RefCountedEventPtr{sharedEvent.get(), refCountedEventDeleter}),
+     ...);
+
+    co_await sharedEvent->WaitAsync();
 }
 
 /// @brief Await for any task to complete.

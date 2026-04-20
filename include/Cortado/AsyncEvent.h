@@ -7,8 +7,6 @@
 
 // Cortado
 //
-#include <Cortado/Concepts/Atomic.h>
-#include <Cortado/Concepts/CoroutineScheduler.h>
 #include <Cortado/Detail/CoroutineAwaiterQueueNode.h>
 
 // STL
@@ -28,6 +26,8 @@ class EventAwaiter;
 template <Concepts::Atomic AtomicT>
 class AsyncEvent
 {
+    using AtomicSubstituteT = AtomicT;
+
 public:
     /// @brief Default constructor.
     ///
@@ -63,7 +63,7 @@ public:
     ///
     bool IsSet() const noexcept
     {
-        return m_waitQueue.load(std::memory_order::seq_cst) == EventSet;
+        return m_waitQueue.load(std::memory_order::acquire) == EventSet;
     }
 
     /// @brief Set event and resume awaiting coroutines if any.
@@ -71,7 +71,7 @@ public:
     void Set()
     {
         auto currentState =
-            m_waitQueue.exchange(EventSet, std::memory_order::acquire);
+            m_waitQueue.exchange(EventSet, std::memory_order::acq_rel);
 
         if (currentState == EventNotSet)
         {
@@ -97,10 +97,16 @@ public:
         }
             
         auto *current =
-            reinterpret_cast<Detail::CoroutineAwaiterQueueNode *>(currentState);
-        for (; current != nullptr; current = current->Next)
+            reinterpret_cast<Cortado::Detail::CoroutineAwaiterQueueNode *>(currentState);
+        while (current != nullptr)
         {
+            // Save next before resuming, because Resume() may
+            // destroy the coroutine frame that owns this event,
+            // invalidating 'current'.
+            //
+            auto *next = current->Next;
             current->Resume();
+            current = next;
         }
     }
 
@@ -112,7 +118,7 @@ public:
     bool EnqueueForWait(
         Detail::CoroutineAwaiterQueueNode *handleAwaiter) noexcept
     {
-        auto expectedState = m_waitQueue.load(std::memory_order::seq_cst);
+        auto expectedState = m_waitQueue.load(std::memory_order::acquire);
         for (;;)
         {
             // If event is set, do not enqueue
@@ -134,7 +140,7 @@ public:
                         expectedState,
                         reinterpret_cast<Concepts::AtomicPrimitive>(
                             handleAwaiter),
-                        std::memory_order::acquire,
+                        std::memory_order::acq_rel,
                         std::memory_order::relaxed))
                 {
                     return true;
@@ -147,17 +153,32 @@ public:
     /// @tparam AtomicU Is an alias for AtomicT to deduce requirements
     /// only when trying to access Wait method.
     ///
-    template <typename AtomicU = AtomicT>
-        requires Concepts::FutexLikeAtomic<AtomicU>
     inline void Wait() noexcept
+        requires Concepts::FutexLikeAtomic<AtomicSubstituteT>
     {
         Concepts::AtomicPrimitive old =
             this->m_waitQueue.load(std::memory_order_acquire);
         while (old != EventSet)
         {
-            this->m_waitQueue.wait(old, std::memory_order_acquire);
+            this->m_waitQueue.wait(old);
             old = this->m_waitQueue.load(std::memory_order_acquire);
         }
+    }
+
+    inline bool WaitFor(std::uint32_t timeout_ms) noexcept
+        requires Concepts::FutexLikeAtomic<AtomicSubstituteT>
+    {
+        Concepts::AtomicPrimitive old = this->m_waitQueue.load(std::memory_order_acquire);
+
+        if (old == EventSet)
+        {
+            return true;
+        }
+
+        this->m_waitQueue.wait_for(old, timeout_ms);
+
+        return this->m_waitQueue.load(std::memory_order_acquire) ==
+               EventSet;
     }
 
 private:
@@ -209,8 +230,8 @@ public:
     /// set.
     /// @returns true if coroutine enqueued, false if event is ready.
     ///
-    template <Concepts::TaskImpl T, typename R>
-    bool await_suspend(std::coroutine_handle<PromiseType<T, R>> h) noexcept
+    template <Cortado::Concepts::TaskImpl T, typename R>
+    bool await_suspend(std::coroutine_handle<Detail::PromiseType<T, R>> h) noexcept
     {
         AwaiterBase::await_suspend(h);
 

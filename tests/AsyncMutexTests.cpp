@@ -14,7 +14,7 @@ using Task = Cortado::Task<T>;
 
 using AsyncMutex = Cortado::AsyncMutex<std::atomic_int64_t>;
 
-TEST(AsyncMutexTests, BasicLockUnlock)
+TEST(AsyncMutexTests, ScopedLockAsync_WhenUnlocked_Success)
 {
     AsyncMutex mutex;
 
@@ -47,7 +47,7 @@ TEST(AsyncMutexTests, BasicLockUnlock)
     EXPECT_TRUE(taskObject.IsReady());
 }
 
-TEST(AsyncMutexTests, BasicConcurrency)
+TEST(AsyncMutexTests, ScopedLockAsync_WhenContended_Success)
 {
     constexpr std::size_t ConcurrencyCount = 4;
 
@@ -166,7 +166,7 @@ TEST(AsyncMutexTests, BasicConcurrency)
     }
 }
 
-TEST(AsyncMutexTests, TryLockWhileLocked)
+TEST(AsyncMutexTests, TryLock_WhenAlreadyLocked_Fail)
 {
     AsyncMutex m;
 
@@ -183,7 +183,7 @@ TEST(AsyncMutexTests, TryLockWhileLocked)
     m.Unlock();
 }
 
-TEST(AsyncMutexTests, ScopedLockUnlocksAfterException)
+TEST(AsyncMutexTests, ScopedLock_WhenExceptionThrown_Unlocks)
 {
     AsyncMutex m;
 
@@ -203,7 +203,7 @@ TEST(AsyncMutexTests, ScopedLockUnlocksAfterException)
     EXPECT_TRUE(m.TryLock());
 }
 
-TEST(AsyncMutexAdditionalTests, StressOnDefaultScheduler)
+TEST(AsyncMutexTests, ScopedLockAsync_WhenStressed_Success)
 {
     constexpr std::size_t Threads = 8;
     constexpr std::size_t Iterations = 2000;
@@ -243,4 +243,38 @@ TEST(AsyncMutexAdditionalTests, StressOnDefaultScheduler)
 
     EXPECT_TRUE(m.TryLock());
     EXPECT_EQ(counter.load(), Threads * Iterations);
+}
+
+TEST(AsyncMutexTests, ScopedLock_WhenManualUnlock_Success)
+{
+    AsyncMutex m;
+
+    auto task = [&]() -> Task<>
+    {
+        auto lock = co_await m.ScopedLockAsync();
+        lock.Unlock();
+
+        // Mutex should be available again while still inside the scope
+        EXPECT_TRUE(m.TryLock());
+        m.Unlock();
+    };
+
+    task().Get();
+}
+
+TEST(AsyncMutexTests, ScopedLock_WhenDoubleUnlock_Success)
+{
+    AsyncMutex m;
+
+    auto task = [&]() -> Task<>
+    {
+        auto lock = co_await m.ScopedLockAsync();
+        lock.Unlock();
+        lock.Unlock(); // second call must be a no-op
+
+        EXPECT_TRUE(m.TryLock());
+        m.Unlock();
+    };
+
+    task().Get();
 }
