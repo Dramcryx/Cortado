@@ -7,7 +7,6 @@
 
 // Cortado
 //
-#include <Cortado/Concepts/CoroutineScheduler.h>
 #include <Cortado/Detail/CoroutineAwaiterQueueNode.h>
 
 // STL
@@ -257,7 +256,7 @@ public:
     /// @returns true if locked quickly, false otherwise.
     ///
     template <Concepts::TaskImpl T, typename R>
-    bool await_suspend(std::coroutine_handle<PromiseType<T, R>> h) noexcept
+    bool await_suspend(std::coroutine_handle<Detail::PromiseType<T, R>> h) noexcept
     {
         AwaiterBase::await_suspend(h);
 
@@ -365,7 +364,7 @@ public:
     /// @returns true if locked quickly, false otherwise.
     ///
     template <Concepts::TaskImpl T, typename R>
-    bool await_suspend(std::coroutine_handle<PromiseType<T, R>> h) noexcept
+    bool await_suspend(std::coroutine_handle<Detail::PromiseType<T, R>> h) noexcept
     {
         AwaiterBase::await_suspend(h);
 

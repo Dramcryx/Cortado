@@ -25,7 +25,7 @@ struct DefaultTaskImpl :
     Common::STLExceptionHandler,
     DefaultScheduler
 {
-    using Event = DefaultEvent;
+    using Event = Cortado::DefaultEvent;
 };
 
 } // namespace Cortado

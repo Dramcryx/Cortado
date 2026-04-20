@@ -162,7 +162,7 @@ Debian package (Debian, Ubuntu, Linux Mint etc.)
 ---------------
 Download a deb package from releases: https://github.com/Dramcryx/Cortado/releases, then from terminal:
 ```
-sudo dpkg -i Cortado-0.3.0.deb
+sudo dpkg -i Cortado-0.4.0.deb
 ```
 
 RPM package (Fedora)
@@ -173,10 +173,10 @@ cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local/
 
 cpack -G RPM ./build/CPackConfig.cmake
 ```
-This will generate a file named Cortado-0.3.0.rpm.
+This will generate a file named Cortado-0.4.0.rpm.
 Next, run rpm installation:
 ```
-sudo rpm -i Cortado-0.3.0.rpm
+sudo rpm -i Cortado-0.4.0.rpm
 ```
 
 NuGet package

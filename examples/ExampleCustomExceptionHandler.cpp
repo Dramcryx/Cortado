@@ -1,87 +1,119 @@
 /// @file ExampleCustomExceptionHandler.cpp
-/// Example of customizing an exception handler.
+/// Example of customizing an exception handler with a non-STL exception type.
+///
+/// This demonstrates how to replace STLExceptionHandler with your own
+/// error type that does not derive from std::exception. Useful for
+/// projects that avoid C++ exceptions or use a domain-specific error model.
 ///
 
 // Cortado
 //
 #include <Cortado/Await.h>
+#include <Cortado/DefaultTaskImpl.h>
 
 // STL
 //
-#include <cassert>
-#include <cstdio>
-#include <stdexcept>
+#include <iostream>
+#include <string>
 
-#ifndef _WIN32
-#define E_UNEXPECTED                     0x8000FFFFL
-#define E_OUTOFMEMORY                    0x80000002L
-#define E_INVALIDARG                     0x80000003L
-#define E_FAIL                           0x80000008L
-#endif // !_WIN32
-
-// Pretend we throw HRESULTs instead of exception.
-//
-class CustomExceptionHandler
+/// @brief A custom error type that is not derived from std::exception.
+///
+struct AppError
 {
-public:
-	using Exception = long;
+    int Code;
+    std::string Message;
+};
 
-	inline static Exception Catch()
-	{
-		try
-		{
-			throw; // rethrow current exception
-		}
-		catch (const std::invalid_argument &)
-		{
-            return E_INVALIDARG;
-		}
-        catch (const std::bad_alloc &)
-		{
-			return E_OUTOFMEMORY;
-		}
-		catch (const std::runtime_error&)
+/// @brief Custom exception handler that catches and rethrows AppError.
+///
+/// The handler stores the last thrown AppError in a thread_local variable.
+/// `Catch()` is called inside `unhandled_exception()` and must return the
+/// stored exception. `Rethrow()` is called from `Get()` and re-throws it.
+///
+struct AppErrorHandler
+{
+    /// @brief The exception type stored in coroutine promise storage.
+    ///
+    using Exception = AppError;
+
+    /// @brief Called by the promise's `unhandled_exception()`.
+    /// Must capture the in-flight exception and return it.
+    ///
+    static AppError Catch()
+    {
+        try
         {
-			return E_FAIL;
-		}
-		catch (...)
-		{
-            return E_UNEXPECTED;
-		}
-	}
+            throw; // re-throw current exception to catch it as AppError
+        }
+        catch (const AppError &e)
+        {
+            return e;
+        }
+        catch (...)
+        {
+            // Fallback for unexpected types — map to a generic error.
+            return AppError{-1, "Unknown error"};
+        }
+    }
 
-	inline static void Rethrow(Exception &&ex)
-	{
-		throw ex;
+    /// @brief Called by the promise's `Get()` when stored value is an error.
+    /// @param e The stored error.
+    ///
+    static void Rethrow(AppError &&e)
+    {
+        throw e;
     }
 };
 
-struct CustomTaskImpl :
-	Cortado::Common::STLAtomic,
-	Cortado::Common::STLCoroutineAllocator,
-	Cortado::DefaultScheduler,
-	CustomExceptionHandler
+/// @brief Compose a TaskImpl that uses AppErrorHandler instead of
+/// STLExceptionHandler. Everything else stays default.
+///
+struct TaskImplWithCustomExceptionHandler :
+    Cortado::Common::STLAtomic,
+    Cortado::Common::STLCoroutineAllocator,
+    AppErrorHandler,
+    Cortado::DefaultScheduler
 {
     using Event = Cortado::DefaultEvent;
 };
 
-Cortado::Task<void, CustomTaskImpl> ExampleFunctionThatThrows()
+template <typename T = void>
+using Task = Cortado::Task<T, TaskImplWithCustomExceptionHandler>;
+
+/// @brief A coroutine that succeeds.
+///
+Task<int> SuccessAsync()
 {
-	co_await Cortado::ResumeBackground();
-	throw std::runtime_error("Example error");
+    co_await Cortado::ResumeBackground();
+    co_return 42;
+}
+
+/// @brief A coroutine that fails with an AppError.
+///
+Task<int> FailAsync()
+{
+    co_await Cortado::ResumeBackground();
+    throw AppError{404, "Resource not found"};
+    co_return 0; // never reached
 }
 
 int main()
 {
-	try
-	{
-		ExampleFunctionThatThrows().Get();
-	}
-	catch (long errCode)
-	{
-        assert(errCode == E_FAIL);
-		printf("Caught error code: 0x%lX\n", errCode);
-	}
+    // 1) Successful path
+    //
+    std::cout << "SuccessAsync returned: " << SuccessAsync().Get() << "\n";
 
-	return 0;
+    // 2) Error path — Get() rethrows AppError
+    //
+    try
+    {
+        FailAsync().Get();
+    }
+    catch (const AppError &e)
+    {
+        std::cout << "Caught AppError { Code=" << e.Code
+                  << ", Message=\"" << e.Message << "\" }\n";
+    }
+
+    return 0;
 }

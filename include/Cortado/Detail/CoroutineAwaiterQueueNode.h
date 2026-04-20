@@ -10,6 +10,10 @@
 #include <Cortado/AwaiterBase.h>
 #include <Cortado/Concepts/CoroutineScheduler.h>
 
+// STL
+//
+#include <coroutine>
+
 namespace Cortado::Detail
 {
 struct CoroutineAwaiterQueueNode : AwaiterBase

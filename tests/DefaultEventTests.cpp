@@ -9,7 +9,7 @@
 #include <Cortado/Await.h>
 #include <Cortado/DefaultEvent.h>
 
-TEST(DefaultEventTests, BasicSet)
+TEST(DefaultEventTests, WaitFor_WhenNotSet_Fail)
 {
     Cortado::DefaultEvent event;
 
@@ -24,7 +24,7 @@ TEST(DefaultEventTests, BasicSet)
     ASSERT_TRUE(event.WaitFor(100)) << "Event was set, no need to wait!";
 }
 
-TEST(DefaultEventTests, BasicConcurrency)
+TEST(DefaultEventTests, WaitFor_WhenSetFromBackground_Success)
 {
     Cortado::DefaultEvent event;
 
@@ -50,7 +50,7 @@ TEST(DefaultEventTests, BasicConcurrency)
     EXPECT_EQ(1, value);
 }
 
-TEST(DefaultEventTests, StrongerConcurrency)
+TEST(DefaultEventTests, WaitFor_WhenConcurrentIncrDecr_Success)
 {
     Cortado::DefaultEvent event;
 
