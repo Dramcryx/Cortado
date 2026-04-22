@@ -165,7 +165,13 @@ public:
         }
     }
 
-    inline bool WaitFor(std::uint32_t timeout_ms) noexcept
+    /// @brief Sync wait for event with timeout.
+    /// @tparam AtomicU Is an alias for AtomicT to deduce requirements
+    /// only when trying to access Wait method.
+    /// @param timeout_ms Timeout in milliseconds.
+    /// @returns true if event is set, false if timeout occurred.
+    ///
+    inline bool WaitFor(std::uint32_t timeoutMS) noexcept
         requires Concepts::FutexLikeAtomic<AtomicSubstituteT>
     {
         Concepts::AtomicPrimitive old = this->m_waitQueue.load(std::memory_order_acquire);
@@ -175,16 +181,24 @@ public:
             return true;
         }
 
-        this->m_waitQueue.wait_for(old, timeout_ms);
+        this->m_waitQueue.wait_for(old, timeoutMS);
 
         return this->m_waitQueue.load(std::memory_order_acquire) ==
                EventSet;
     }
 
 private:
+    /// @brief Event not set state constant.
+    ///
     static constexpr Concepts::AtomicPrimitive EventNotSet = 0;
+
+    /// @brief Event set state constant.
+    ///
     static constexpr Concepts::AtomicPrimitive EventSet =
         (std::numeric_limits<Concepts::AtomicPrimitive>::max)();
+
+    /// @brief Atomic variable that holds event state and the stack of awaiters.
+    ///
     AtomicT m_waitQueue{EventNotSet};
 };
 

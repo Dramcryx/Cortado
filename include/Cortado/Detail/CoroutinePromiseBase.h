@@ -7,8 +7,10 @@
 
 // Cortado
 //
+#include <Cortado/Concepts/AsyncStackTracing.h>
 #include <Cortado/Concepts/PreAndPostAction.h>
 #include <Cortado/Concepts/TaskImpl.h>
+#include <Cortado/Detail/AsyncStackFrame.h>
 #include <Cortado/Detail/AtomicRefCount.h>
 #include <Cortado/Detail/CoroutineStorage.h>
 
@@ -61,6 +63,13 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
     ///
     std::suspend_never initial_suspend()
     {
+        if constexpr (Concepts::AsyncStackTracing<T>)
+        {
+            using FrameT = AsyncStackFrameT;
+            m_asyncFrame.parentFrame = FrameT::GetCurrent();
+            FrameT::SetCurrent(&m_asyncFrame);
+        }
+
         return {};
     }
 
@@ -81,6 +90,12 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
                 // No _this.BeforeSuspend(); even if we suspend because
                 // this frame is outside of coroutine function body.
                 //
+                if constexpr (Concepts::AsyncStackTracing<T>)
+                {
+                    using FrameT = AsyncStackFrameT;
+                    FrameT::SetCurrent(_this.m_asyncFrame.parentFrame);
+                }
+
                 _this.m_completionEvent.Set();
                 auto next = std::coroutine_handle<>::from_address(
                     _this.CallbackValueRendezvous());
@@ -167,6 +182,12 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
     ///
     void BeforeSuspend()
     {
+        if constexpr (Concepts::AsyncStackTracing<T>)
+        {
+            using FrameT = AsyncStackFrameT;
+            FrameT::SetCurrent(m_asyncFrame.parentFrame);
+        }
+
         if constexpr (Concepts::HasAdditionalStorage<T>)
         {
             T::OnBeforeSuspend(m_additionalStorage);
@@ -179,6 +200,12 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
     ///
     void BeforeResume()
     {
+        if constexpr (Concepts::AsyncStackTracing<T>)
+        {
+            using FrameT = AsyncStackFrameT;
+            FrameT::SetCurrent(&m_asyncFrame);
+        }
+
         if constexpr (Concepts::HasAdditionalStorage<T>)
         {
             T::OnBeforeResume(m_additionalStorage);
@@ -190,7 +217,25 @@ protected:
     using AtomicT = typename T::Atomic;
     using EventT = typename T::Event;
 
+    static constexpr bool HasAsyncStackTracing = Concepts::AsyncStackTracing<T>;
     static constexpr bool HasUserStroage = Concepts::HasAdditionalStorage<T>;
+
+    struct EmptyFrame {};
+
+    template <typename U, bool Enabled>
+    struct AsyncStackFrameHelper
+    {
+        using Type = EmptyFrame;
+    };
+
+    template <typename U>
+    struct AsyncStackFrameHelper<U, true>
+    {
+        using Type = AsyncStackFrame<typename U::AsyncStackTLSProvider>;
+    };
+
+    using AsyncStackFrameT =
+        typename AsyncStackFrameHelper<T, HasAsyncStackTracing>::Type;
 
     using AdditionalStorageT =
         AdditionalStorageHelper<T, HasUserStroage>::AdditionalStorageT;
@@ -213,6 +258,10 @@ protected:
     /// @brief Optional user storage.
     ///
     [[no_unique_address]] AdditionalStorageT m_additionalStorage;
+
+    /// @brief Optional async stack frame.
+    ///
+    [[no_unique_address]] AsyncStackFrameT m_asyncFrame;
 
     /// @brief Rethrows exception from result storage, if any.
     ///

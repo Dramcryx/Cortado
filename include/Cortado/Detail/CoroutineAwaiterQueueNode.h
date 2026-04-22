@@ -16,13 +16,33 @@
 
 namespace Cortado::Detail
 {
+/// @brief Node in a singly-linked list of awaiters waiting on an async primitive.
+/// Used by both AsyncMutex and AsyncEvent to maintain the queue of waiting coroutines.
+///
 struct CoroutineAwaiterQueueNode : AwaiterBase
 {
+    /// @brief Handle of the coroutine to resume when the primitive is ready.
+    /// This value is mandatory and is set by the await_suspend of the awaiter that enqueues itself.
+    ///
     std::coroutine_handle<> HandleToResume{nullptr};
+
+    /// @brief Type-erased function pointer and context for resuming the next waiter.
+    /// If HandleResumerFunc is set, it will be called with the handle of the coroutine to resume and the context when resuming.
+    ///
     void (*HandleResumerFunc)(std::coroutine_handle<>, void *) = nullptr;
+
+    /// @brief Type-erased context pointer for the resumer function, e.g. to hold a pointer to a scheduler.
+    ///
     void *HandleResumerFuncContext = nullptr;
+
+    /// @brief Pointer to the next awaiter in the queue.
+    ///
     CoroutineAwaiterQueueNode *Next{nullptr};
 
+    /// @brief Resume the coroutine associated with this awaiter.
+    /// If a resumer function is set, use it to resume the coroutine (e.g. to schedule it on a specific scheduler).
+    /// Otherwise, resume the coroutine directly.
+    ///
     inline void Resume()
     {
         if (HandleToResume == nullptr)
