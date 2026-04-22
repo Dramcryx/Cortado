@@ -14,6 +14,10 @@ add_executable(ExampleCustomExceptionHandler examples/ExampleCustomExceptionHand
 
 target_include_directories(ExampleCustomExceptionHandler PRIVATE ./include)
 
+add_executable(ExampleAsyncStackTrace examples/ExampleAsyncStackTrace.cpp)
+
+target_include_directories(ExampleAsyncStackTrace PRIVATE ./include)
+
 if (WIN32)
   target_compile_definitions(ExampleDefaultTaskImpl PRIVATE _AMD64_ _UNICODE)
   target_link_libraries(ExampleDefaultTaskImpl PRIVATE Synchronization.lib)
@@ -26,6 +30,9 @@ if (WIN32)
 
   target_compile_definitions(ExampleCustomExceptionHandler PRIVATE _AMD64_ _UNICODE)
   target_link_libraries(ExampleCustomExceptionHandler PRIVATE Synchronization.lib)
+
+  target_compile_definitions(ExampleAsyncStackTrace PRIVATE _AMD64_ _UNICODE)
+  target_link_libraries(ExampleAsyncStackTrace PRIVATE Synchronization.lib)
 endif()
 
 option(ASAN "Build with address sanitizer" OFF)
@@ -51,6 +58,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
 
     target_compile_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
     target_link_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
+
+    target_compile_options(ExampleAsyncStackTrace PRIVATE -fsanitize=address)
+    target_link_options(ExampleAsyncStackTrace PRIVATE -fsanitize=address)
   endif()
 
   if (TSAN)
@@ -66,6 +76,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
 
     target_compile_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
     target_link_options(ExampleCustomExceptionHandler PRIVATE -fsanitize=address)
+
+    target_compile_options(ExampleAsyncStackTrace PRIVATE -fsanitize=thread)
+    target_link_options(ExampleAsyncStackTrace PRIVATE -fsanitize=thread)
   endif()
 else()
   message(STATUS ${CMAKE_CXX_COMPILER_ID})

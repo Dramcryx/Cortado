@@ -19,6 +19,7 @@ Table of contents
   - Await another Task
   - Await multiple Tasks
 - Customization
+- Async stack tracing
 - Getting started
 - Roadmap & TODO
 - Contributing & License
@@ -33,7 +34,7 @@ atomic primitives or scheduler.
 Highlights
 ----------
 - Small Task abstraction for suspendable functions.
-- Pluggable: allocator, atomic, exception handler and scheduler can be replaced.
+- Pluggable: allocator, atomic, exception handler, scheduler and async stack tracing can be replaced.
 - Common awaiters: resume to background, when_all, when_any, awaiting other Tasks.
 - Designed for projects that can't or don't want to rely on the default STL runtime.
 - Focused on clarity and portability rather than microbenchmarks.
@@ -130,6 +131,85 @@ using Task = Cortado::Task<T, SillyTaskImpl>;
 ```
 4) Atomic primitive which is required for task concurrency.
 5) Event primitive which is also required for task concurrency and sync wait.
+6) Async stack tracing — see the section below.
+
+Async stack tracing
+-------------------
+Cortado supports opt-in async stack tracing: a thread-local linked list of `AsyncStackFrame`
+nodes that tracks the logical async call chain across coroutine suspensions. This is useful
+for diagnostic tooling such as custom assert handlers, logging, or debugger extensions.
+
+The feature is **zero-cost when disabled** — if your `TaskImpl` does not expose an
+`AsyncStackTLSProvider` typedef, the frame member is optimised away entirely via
+`[[no_unique_address]]` and `if constexpr`.
+
+### Enabling async stack tracing
+
+Add an `AsyncStackTLSProvider` typedef to your `TaskImpl`. Cortado ships with
+`StandardAsyncStackTLS`, which uses `static inline thread_local`:
+
+```c++
+#include <Cortado/Common/StandardAsyncStackTLS.h>
+#include <Cortado/DefaultTaskImpl.h>
+
+struct TracedTaskImpl :
+    Cortado::Common::STLAtomic,
+    Cortado::Common::STLCoroutineAllocator,
+    Cortado::Common::STLExceptionHandler,
+    Cortado::DefaultScheduler
+{
+    using Event = Cortado::DefaultEvent;
+    using AsyncStackTLSProvider = Cortado::Common::StandardAsyncStackTLS;
+};
+
+template <typename T = void>
+using TracedTask = Cortado::Task<T, TracedTaskImpl>;
+```
+
+### Walking the async stack
+
+You can walk the async call chain from anywhere — coroutine or plain function — using
+`WalkCurrentAsyncStack` or `WalkAsyncStackFrom`:
+
+```c++
+#include <Cortado/Detail/AsyncStackFrame.h>
+
+using AsyncFrame =
+    Cortado::Detail::AsyncStackFrame<Cortado::Common::StandardAsyncStackTLS>;
+
+void DumpAsyncStack()
+{
+    int depth = 0;
+    Cortado::Detail::WalkCurrentAsyncStack<
+        Cortado::Common::StandardAsyncStackTLS>(
+        [&](const AsyncFrame &frame) -> bool
+        {
+            std::cout << "  [" << depth++ << "] frame @ " << &frame << "\n";
+            return true; // return false to stop early
+        });
+}
+```
+
+### Custom TLS providers
+
+For environments without standard `thread_local` (RTOS, fiber-local, etc.) you can supply
+your own provider. It must satisfy the `AsyncStackTLS` concept — a struct with
+`static void* Get()` and `static void Set(void*)`:
+
+```c++
+struct MyFiberLocalTLS
+{
+    static void *Get()           { return myFiberGetSlot(); }
+    static void  Set(void *ptr)  { myFiberSetSlot(ptr);     }
+};
+
+struct FiberTaskImpl : /* ... */
+{
+    using AsyncStackTLSProvider = MyFiberLocalTLS;
+};
+```
+
+A detailed example is in `examples/ExampleAsyncStackTrace.cpp`.
 
 Getting started
 ---------------
@@ -162,7 +242,7 @@ Debian package (Debian, Ubuntu, Linux Mint etc.)
 ---------------
 Download a deb package from releases: https://github.com/Dramcryx/Cortado/releases, then from terminal:
 ```
-sudo dpkg -i Cortado-0.4.0.deb
+sudo dpkg -i Cortado-0.5.0.deb
 ```
 
 RPM package (Fedora)
@@ -173,10 +253,10 @@ cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local/
 
 cpack -G RPM ./build/CPackConfig.cmake
 ```
-This will generate a file named Cortado-0.4.0.rpm.
+This will generate a file named Cortado-0.5.0.rpm.
 Next, run rpm installation:
 ```
-sudo rpm -i Cortado-0.4.0.rpm
+sudo rpm -i Cortado-0.5.0.rpm
 ```
 
 NuGet package
@@ -189,7 +269,7 @@ Roadmap & TODO
 - Better documentation and examples (including integration with various schedulers).
 - Cancellation support.
 - Fuzzer and tests.
-- Stack tracing support (Natvis scripts, gdb/lldb helpers).
+- ~~Stack tracing support~~ — async stack frames implemented; Natvis/gdb/lldb helpers TBD.
 - MCS mutex implementation
 
 Contributing

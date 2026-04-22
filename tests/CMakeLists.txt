@@ -17,7 +17,8 @@ add_executable(
     ${CMAKE_CURRENT_LIST_DIR}/DefaultTaskWithAdditionalStorageTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/AsyncEventTests.cpp
     ${CMAKE_CURRENT_LIST_DIR}/AsyncMutexTests.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/DefaultEventTests.cpp)
+    ${CMAKE_CURRENT_LIST_DIR}/DefaultEventTests.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/AsyncStackTraceTests.cpp)
 
 if (WIN32)
   target_link_libraries(CortadoTests PRIVATE Synchronization.lib)
