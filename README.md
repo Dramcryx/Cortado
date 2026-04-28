@@ -146,10 +146,11 @@ The feature is **zero-cost when disabled** — if your `TaskImpl` does not expos
 ### Enabling async stack tracing
 
 Add an `AsyncStackTLSProvider` typedef to your `TaskImpl`. Cortado ships with
-`StandardAsyncStackTLS`, which uses `static inline thread_local`:
+`DefaultAsyncStackTLS`, which selects the appropriate platform provider
+(`Win32AsyncStackTLS` on Windows, `ClangOrGccAsyncStackTLS` elsewhere):
 
 ```c++
-#include <Cortado/Common/StandardAsyncStackTLS.h>
+#include <Cortado/DefaultAsyncStackTLS.h>
 #include <Cortado/DefaultTaskImpl.h>
 
 struct TracedTaskImpl :
@@ -159,7 +160,7 @@ struct TracedTaskImpl :
     Cortado::DefaultScheduler
 {
     using Event = Cortado::DefaultEvent;
-    using AsyncStackTLSProvider = Cortado::Common::StandardAsyncStackTLS;
+    using AsyncStackTLSProvider = Cortado::DefaultAsyncStackTLS;
 };
 
 template <typename T = void>
@@ -175,13 +176,13 @@ You can walk the async call chain from anywhere — coroutine or plain function 
 #include <Cortado/Detail/AsyncStackFrame.h>
 
 using AsyncFrame =
-    Cortado::Detail::AsyncStackFrame<Cortado::Common::StandardAsyncStackTLS>;
+    Cortado::Detail::AsyncStackFrame<Cortado::DefaultAsyncStackTLS>;
 
 void DumpAsyncStack()
 {
     int depth = 0;
     Cortado::Detail::WalkCurrentAsyncStack<
-        Cortado::Common::StandardAsyncStackTLS>(
+        Cortado::DefaultAsyncStackTLS>(
         [&](const AsyncFrame &frame) -> bool
         {
             std::cout << "  [" << depth++ << "] frame @ " << &frame << "\n";

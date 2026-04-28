@@ -33,6 +33,11 @@ if (WIN32)
 
   target_compile_definitions(ExampleAsyncStackTrace PRIVATE _AMD64_ _UNICODE)
   target_link_libraries(ExampleAsyncStackTrace PRIVATE Synchronization.lib)
+
+  add_executable(ExampleWin32DbgHelpAsyncStackTrace examples/ExampleWin32DbgHelpAsyncStackTrace.cpp)
+  target_include_directories(ExampleWin32DbgHelpAsyncStackTrace PRIVATE ./include)
+  target_compile_definitions(ExampleWin32DbgHelpAsyncStackTrace PRIVATE _AMD64_ _UNICODE)
+  target_link_libraries(ExampleWin32DbgHelpAsyncStackTrace PRIVATE Synchronization.lib dbghelp.lib)
 endif()
 
 option(ASAN "Build with address sanitizer" OFF)

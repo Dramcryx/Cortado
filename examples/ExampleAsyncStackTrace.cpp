@@ -9,7 +9,7 @@
 // Cortado
 //
 #include <Cortado/Await.h>
-#include <Cortado/Common/StandardAsyncStackTLS.h>
+#include <Cortado/DefaultAsyncStackTLS.h>
 #include <Cortado/DefaultTaskImpl.h>
 #include <Cortado/Detail/AsyncStackFrame.h>
 
@@ -17,8 +17,9 @@
 //
 #include <iostream>
 
-/// @brief A TaskImpl that enables async stack tracing using standard
-/// thread_local storage. Inherits everything else from DefaultTaskImpl.
+/// @brief A TaskImpl that enables async stack tracing using the
+/// platform-default TLS provider. Inherits everything else from
+/// DefaultTaskImpl.
 ///
 struct TaskImplWithAsyncStack :
     Cortado::Common::STLAtomic,
@@ -27,14 +28,14 @@ struct TaskImplWithAsyncStack :
     Cortado::DefaultScheduler
 {
     using Event = Cortado::DefaultEvent;
-    using AsyncStackTLSProvider = Cortado::Common::StandardAsyncStackTLS;
+    using AsyncStackTLSProvider = Cortado::DefaultAsyncStackTLS;
 };
 
 template <typename T = void>
 using Task = Cortado::Task<T, TaskImplWithAsyncStack>;
 
 using AsyncFrame =
-    Cortado::Detail::AsyncStackFrame<Cortado::Common::StandardAsyncStackTLS>;
+    Cortado::Detail::AsyncStackFrame<Cortado::DefaultAsyncStackTLS>;
 
 /// @brief A plain synchronous function that dumps the async stack.
 /// This simulates what a DBG_ASSERT implementation would do —
@@ -46,7 +47,7 @@ void DumpAsyncStack(const char *label)
 
     int depth = 0;
     Cortado::Detail::WalkCurrentAsyncStack<
-        Cortado::Common::StandardAsyncStackTLS>(
+        Cortado::DefaultAsyncStackTLS>(
         [&](const AsyncFrame &frame) -> bool
         {
             std::cout << "  [" << depth << "] frame @ " << &frame << std::endl;

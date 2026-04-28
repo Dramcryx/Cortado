@@ -16,11 +16,11 @@ using DefaultAsyncStackTLS = Common::Win32AsyncStackTLS;
 
 #else // !_WIN32
 
-#include <Cortado/Common/StandardAsyncStackTLS.h>
+#include <Cortado/Common/ClangOrGccAsyncStackTLS.h>
 
 namespace Cortado
 {
-using DefaultAsyncStackTLS = Common::StandardAsyncStackTLS;
+using DefaultAsyncStackTLS = Common::ClangOrGccAsyncStackTLS;
 } // namespace Cortado
 
 #endif // _WIN32

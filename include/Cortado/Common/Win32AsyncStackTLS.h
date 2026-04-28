@@ -14,6 +14,8 @@
 // Win32
 //
 #include <processthreadsapi.h>
+#include <intrin.h>
+#pragma intrinsic(_ReturnAddress)
 
 namespace Cortado::Common
 {
@@ -36,6 +38,19 @@ struct Win32AsyncStackTLS
     static void Set(void *ptr)
     {
         TlsSetValue(TlsIndex(), ptr);
+    }
+
+    /// @brief Capture the return address of the caller. Marked
+    /// __forceinline to ask MSVC to inline this into initial_suspend so
+    /// the captured address points into the coroutine bootstrap.
+    /// NOTE: MSVC documents that any function containing _ReturnAddress
+    /// is implicitly noinline regardless of __forceinline; the marker is
+    /// kept for intent and to maximise the chance of inlining in
+    /// optimized builds (Release / RelWithDebInfo).
+    ///
+    __forceinline static void *CaptureReturnAddress()
+    {
+        return _ReturnAddress();
     }
 
     /// @brief Get or allocate TLS index in Win32.

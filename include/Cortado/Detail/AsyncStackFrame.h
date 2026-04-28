@@ -24,6 +24,14 @@ struct AsyncStackFrame
     ///
     AsyncStackFrame *parentFrame{nullptr};
 
+    /// @brief Code address captured when the coroutine was created.
+    /// Points into the user coroutine's bootstrap code (the function
+    /// that called the coroutine factory); resolvable by symbolizers
+    /// such as DbgHelp's SymFromAddr to identify the coroutine.
+    /// May be nullptr if not captured.
+    ///
+    void *returnAddress{nullptr};
+
     /// @brief Get the currently active async stack frame for this thread.
     /// @returns Pointer to the top frame, or nullptr if none.
     ///

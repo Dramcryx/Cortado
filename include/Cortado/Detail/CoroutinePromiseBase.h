@@ -66,7 +66,9 @@ struct CoroutinePromiseBase : AtomicRefCount<typename T::Atomic>
         if constexpr (Concepts::AsyncStackTracing<T>)
         {
             using FrameT = AsyncStackFrameT;
+            using TLS = typename T::AsyncStackTLSProvider;
             m_asyncFrame.parentFrame = FrameT::GetCurrent();
+            m_asyncFrame.returnAddress = TLS::CaptureReturnAddress();
             FrameT::SetCurrent(&m_asyncFrame);
         }
 
